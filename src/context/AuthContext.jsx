@@ -6,13 +6,22 @@ const STORAGE_KEY = 'exchange-diary-session-v1'
 
 const AuthContext = createContext(null)
 
+// 로그인 정보 저장 위치: 기본은 localStorage(계속 유지), '이 기기에 저장 안 함'을 고르면 sessionStorage(탭을 닫으면 삭제)
 function readStoredSession() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      const raw = store.getItem(STORAGE_KEY)
+      if (raw) return JSON.parse(raw)
+    } catch { /* ignore */ }
   }
+  return null
+}
+
+function writeSession(next, remember) {
+  const useSession = remember === false || (remember === undefined && sessionStorage.getItem(STORAGE_KEY) && !localStorage.getItem(STORAGE_KEY))
+  const [target, other] = useSession ? [sessionStorage, localStorage] : [localStorage, sessionStorage]
+  target.setItem(STORAGE_KEY, JSON.stringify(next))
+  other.removeItem(STORAGE_KEY)
 }
 
 export function AuthProvider({ children }) {
@@ -25,6 +34,7 @@ export function AuthProvider({ children }) {
   const [configSha, setConfigSha] = useState(undefined)
   const [status, setStatus] = useState('loading') // loading | needs-setup | ready | error
   const [error, setError] = useState(null)
+  const [repoPublic, setRepoPublic] = useState(false)
 
   const refreshConfig = useCallback(async (c) => {
     const activeClient = c || client
@@ -54,15 +64,17 @@ export function AuthProvider({ children }) {
     }
     const c = createClient(session)
     setClient(c)
+    c.verify().then((info) => setRepoPublic(info?.private === false)).catch(() => {})
     refreshConfig(c)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.owner, session?.repo, session?.token])
 
-  const connect = useCallback(async ({ owner, repo, token, memberId }) => {
+  const connect = useCallback(async ({ owner, repo, token, memberId, remember = true }) => {
     const next = { owner: owner.trim(), repo: repo.trim(), token: token.trim(), memberId }
     const c = createClient(next)
-    await c.verify() // 실패하면 여기서 예외가 던져짐
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+    const info = await c.verify() // 실패하면 여기서 예외가 던져짐
+    setRepoPublic(info?.private === false)
+    writeSession(next, remember)
     setSession(next)
     setClient(c)
     await refreshConfig(c)
@@ -72,7 +84,7 @@ export function AuthProvider({ children }) {
   const setMemberId = useCallback((memberId) => {
     setSession((prev) => {
       const next = { ...prev, memberId }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      writeSession(next)
       return next
     })
   }, [])
@@ -82,8 +94,9 @@ export function AuthProvider({ children }) {
     if (!trimmed) throw new Error('토큰을 입력해주세요.')
     const next = { ...session, token: trimmed }
     const c = createClient(next)
-    await c.verify() // 유효하지 않은 토큰이면 여기서 예외가 던져짐
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+    const info = await c.verify() // 유효하지 않은 토큰이면 여기서 예외가 던져짐
+    setRepoPublic(info?.private === false)
+    writeSession(next)
     setSession(next)
     setClient(c)
     await refreshConfig(c)
@@ -91,6 +104,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
+    sessionStorage.removeItem(STORAGE_KEY)
     setSession(null)
     setClient(null)
     setConfig(null)
@@ -111,6 +125,7 @@ export function AuthProvider({ children }) {
     members: config?.members || [],
     status,
     error,
+    repoPublic,
     connect,
     logout,
     setMemberId,
