@@ -64,10 +64,45 @@ export function emptyEntry(date, memberId) {
   }
 }
 
+// ── config.json은 공동 작업자가 직접 수정할 수 있는 '신뢰할 수 없는 입력'으로 취급합니다.
+const COLOR_RE = /^#[0-9a-fA-F]{3,8}$/
+const ID_RE = /^[a-z0-9가-힣-]{1,40}$/
+const IMG_DATA_RE = /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/
+
+const safeColor = (c, fallback) => (typeof c === 'string' && COLOR_RE.test(c) ? c : fallback)
+const safeImg = (u) => (typeof u === 'string' && u.length < 1_500_000 && IMG_DATA_RE.test(u) ? u : null)
+const safeText = (t, max = 40) => (typeof t === 'string' ? t.slice(0, max) : '')
+
+export function sanitizeConfig(raw) {
+  const cfg = raw && typeof raw === 'object' ? raw : {}
+  const members = (Array.isArray(cfg.members) ? cfg.members : [])
+    .filter((m) => m && typeof m.id === 'string' && ID_RE.test(m.id))
+    .map((m) => ({
+      ...m,
+      displayName: safeText(m.displayName) || m.id,
+      color: safeColor(m.color, '#ff8fb1'),
+      bgColor: m.bgColor ? safeColor(m.bgColor, null) : m.bgColor,
+      avatar: m.avatar ? safeImg(m.avatar) : m.avatar,
+      checklistFields: Array.isArray(m.checklistFields)
+        ? m.checklistFields
+            .filter((f) => f && typeof f.key === 'string' && /^[A-Za-z0-9_-]{1,60}$/.test(f.key))
+            .map((f) => ({ ...f, label: safeText(f.label, 20), icon: safeText(f.icon, 16) }))
+            .slice(0, 30)
+        : m.checklistFields,
+    }))
+  const out = { ...cfg, members }
+  if (Array.isArray(cfg.customReactions)) {
+    out.customReactions = cfg.customReactions
+      .filter((r) => r && typeof r.id === 'string' && /^[A-Za-z0-9_-]{1,60}$/.test(r.id))
+      .map((r) => ({ ...r, name: safeText(r.name), image: r.image ? safeImg(r.image) : r.image, emoji: r.emoji ? safeText(r.emoji, 16) : r.emoji }))
+  }
+  return out
+}
+
 export async function loadConfig(client) {
   const res = await client.getJson(CONFIG_PATH)
   if (!res) return null
-  return res
+  return { ...res, json: sanitizeConfig(res.json) }
 }
 
 export async function initConfig(client, firstMember) {
@@ -211,6 +246,22 @@ export function toggleReaction(entry, emoji, memberId) {
 
 export function withNewComment(entry, comment) {
   return { ...entry, comments: [...(entry.comments || []), comment] }
+}
+
+export function withEditedComment(entry, commentId, text) {
+  return {
+    ...entry,
+    comments: (entry.comments || []).map((c) => (
+      c.id === commentId ? { ...c, text, editedAt: new Date().toISOString() } : c
+    )),
+  }
+}
+
+export function withoutComment(entry, commentId) {
+  return {
+    ...entry,
+    comments: (entry.comments || []).filter((c) => c.id !== commentId),
+  }
 }
 
 export function makeCommentId() {
