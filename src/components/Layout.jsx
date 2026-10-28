@@ -13,6 +13,12 @@ export default function Layout({ activeMemberId, onSelectMember, onOpenSettings,
 
   return (
     <div className="app-shell">
+      {auth.repoPublic && (
+        <div className="security-banner" role="alert">
+          ⚠️ 데이터 레포가 <b>공개(Public)</b> 상태예요. 일기와 사진을 누구나 볼 수 있어요.
+          GitHub 레포 Settings → General → 맨 아래 Change visibility에서 Private으로 바꿔주세요.
+        </div>
+      )}
       <aside className="sidebar">
         <div className="sidebar-top">
           <button className="logo" onClick={() => onSelectMember(null)} title="캘린더로 돌아가기">

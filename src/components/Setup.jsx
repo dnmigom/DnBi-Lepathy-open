@@ -10,7 +10,7 @@ const BG_PALETTE = ['#fdf1f3', '#eef2fb', '#f4f5f0', '#eaf7f0', '#fdf6e3', '#f3e
 
 export default function Setup() {
   const auth = useAuth()
-  const [form, setForm] = useState({ owner: '', repo: '', token: '' })
+  const [form, setForm] = useState({ owner: '', repo: '', token: '', remember: true })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -19,7 +19,7 @@ export default function Setup() {
     setLoading(true)
     setError(null)
     try {
-      await auth.connect({ owner: form.owner, repo: form.repo, token: form.token })
+      await auth.connect({ owner: form.owner, repo: form.repo, token: form.token, remember: form.remember })
     } catch (err) {
       setError(err.message || '연결에 실패했어요. 저장소 이름과 토큰을 확인해주세요.')
     } finally {
@@ -51,6 +51,13 @@ export default function Setup() {
               type="password" placeholder="ghp_..." required
               value={form.token} onChange={(e) => setForm({ ...form, token: e.target.value })}
             />
+          </label>
+          <label className="remember-row">
+            <input
+              type="checkbox" checked={form.remember}
+              onChange={(e) => setForm({ ...form, remember: e.target.checked })}
+            />
+            <span>이 기기에서 로그인 유지 (공용 컴퓨터라면 체크 해제 — 탭을 닫으면 토큰이 지워져요)</span>
           </label>
           <p className="setup-hint">
             토큰은 이 브라우저에만 저장돼요. GitHub → Settings → Developer settings →

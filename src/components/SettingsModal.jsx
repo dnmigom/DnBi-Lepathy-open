@@ -229,12 +229,16 @@ export default function SettingsModal({ onClose }) {
         <section className="modal-section">
           <h3>커스텀 반응</h3>
           {(auth.config?.customReactions || []).length === 0 ? (
-            <p className="settings-repo-info">아직 만든 이미지 반응이 없어요. 글 아래 "+ 반응 추가"에서 만들 수 있어요.</p>
+            <p className="settings-repo-info">아직 만든 반응이 없어요. 글 아래 "+ 반응 추가"에서 만들 수 있어요.</p>
           ) : (
             <ul className="settings-member-list">
               {(auth.config?.customReactions || []).map((r) => (
                 <li key={r.id}>
-                  <img src={r.image} alt={r.name} className="settings-reaction-thumb" />
+                  {r.emoji ? (
+                    <span className="settings-reaction-emoji">{r.emoji}</span>
+                  ) : (
+                    <img src={r.image} alt={r.name} className="settings-reaction-thumb" />
+                  )}
                   <span className="settings-member-name">{r.name}</span>
                   <button
                     type="button"

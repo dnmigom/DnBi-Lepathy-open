@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import {
-  deleteEntry, getChecklistFields, imagePath, makeCommentId, saveEntry, toggleReaction, withNewComment,
+  deleteEntry, getChecklistFields, imagePath, makeCommentId, saveEntry, toggleReaction,
+  withEditedComment, withNewComment, withoutComment,
 } from '../lib/dataModel.js'
 import { resizeImageFile } from '../lib/image.js'
 import Avatar from './Avatar.jsx'
@@ -61,6 +62,14 @@ export default function EntryCard({ entry: initialEntry, sha: initialSha, date, 
     }
     const nextEntry = withNewComment(entry, comment)
     await persist(nextEntry)
+  }
+
+  async function handleEditComment(commentId, text) {
+    await persist(withEditedComment(entry, commentId, text))
+  }
+
+  async function handleDeleteComment(commentId) {
+    await persist(withoutComment(entry, commentId))
   }
 
   async function handleDelete() {
@@ -153,7 +162,7 @@ export default function EntryCard({ entry: initialEntry, sha: initialSha, date, 
       <ReactionBar entry={entry} onToggle={handleToggleReaction} />
 
       <div className="comment-section">
-        <CommentList comments={entry.comments} />
+        <CommentList comments={entry.comments} onEditComment={handleEditComment} onDeleteComment={handleDeleteComment} />
         <CommentForm onSubmit={handleAddComment} />
       </div>
 

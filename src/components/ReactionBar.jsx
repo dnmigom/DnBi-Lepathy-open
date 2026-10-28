@@ -7,7 +7,8 @@ export default function ReactionBar({ entry, onToggle }) {
   const auth = useAuth()
   const myId = auth.currentMember?.id
   const [open, setOpen] = useState(false)
-  const [pending, setPending] = useState(null) // { file, preview, name }
+  const [pending, setPending] = useState(null) // { file, preview, name } - 이미지로 만들기
+  const [emojiDraft, setEmojiDraft] = useState(null) // { value, name } - 이모지로 만들기
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
   const [removingCustomId, setRemovingCustomId] = useState(null)
@@ -19,6 +20,7 @@ export default function ReactionBar({ entry, onToggle }) {
       if (wrapRef.current && !wrapRef.current.contains(e.target)) {
         setOpen(false)
         setPending(null)
+        setEmojiDraft(null)
         setUploadError(null)
       }
     }
@@ -28,7 +30,10 @@ export default function ReactionBar({ entry, onToggle }) {
 
   const builtIn = REACTIONS.map((r) => ({ key: r.emoji, label: r.label, type: 'emoji', value: r.emoji }))
   const custom = (auth.config?.customReactions || []).map((r) => ({
-    key: `custom:${r.id}`, label: r.name, type: 'image', value: r.image,
+    key: `custom:${r.id}`,
+    label: r.name,
+    type: r.emoji ? 'emoji' : 'image',
+    value: r.emoji || r.image,
   }))
   const allReactions = [...builtIn, ...custom]
 
@@ -70,9 +75,31 @@ export default function ReactionBar({ entry, onToggle }) {
     }
   }
 
+  async function handleConfirmEmoji(e) {
+    e.preventDefault()
+    if (!emojiDraft) return
+    const value = emojiDraft.value.trim()
+    if (!value) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const reaction = { id: makeCommentId(), name: emojiDraft.name.trim() || value, emoji: value }
+      const updated = await addCustomReaction(auth.client, auth.config, auth.configSha, reaction)
+      auth.setConfig(updated)
+      await auth.refreshConfig()
+      onToggle(`custom:${reaction.id}`)
+      setEmojiDraft(null)
+      setOpen(false)
+    } catch (err) {
+      setUploadError(err.message || '반응을 추가하지 못했어요.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   async function handleDeleteCustom(e, reactionId, label) {
     e.stopPropagation()
-    if (!window.confirm(`"${label}" 반응을 삭제할까요? 이미 남긴 반응 기록에서는 사라지지 않고 빈 이미지로 보일 수 있어요.`)) return
+    if (!window.confirm(`"${label}" 반응을 삭제할까요? 이미 남긴 반응 기록에서는 사라지지 않고 표시가 깨질 수 있어요.`)) return
     setRemovingCustomId(reactionId)
     try {
       const updated = await removeCustomReaction(auth.client, auth.config, auth.configSha, reactionId)
@@ -82,6 +109,8 @@ export default function ReactionBar({ entry, onToggle }) {
       setRemovingCustomId(null)
     }
   }
+
+  const showingForm = pending || emojiDraft
 
   return (
     <div className="reaction-bar">
@@ -107,7 +136,7 @@ export default function ReactionBar({ entry, onToggle }) {
         </button>
         {open && (
           <div className="reaction-picker">
-            {!pending ? (
+            {!showingForm ? (
               <>
                 <div className="reaction-picker-grid">
                   {allReactions.map((r) => {
@@ -141,8 +170,14 @@ export default function ReactionBar({ entry, onToggle }) {
                   + 이미지로 새 반응 만들기
                   <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFilePicked} hidden />
                 </label>
+                <button
+                  type="button" className="reaction-upload-btn"
+                  onClick={() => setEmojiDraft({ value: '', name: '' })}
+                >
+                  + 이모지로 새 반응 만들기
+                </button>
               </>
-            ) : (
+            ) : pending ? (
               <form className="reaction-sticker-form" onSubmit={handleConfirmSticker}>
                 <img src={pending.preview} alt="새 반응 미리보기" className="reaction-sticker-preview" />
                 <input
@@ -154,6 +189,26 @@ export default function ReactionBar({ entry, onToggle }) {
                 <div className="reaction-sticker-actions">
                   <button type="button" className="btn btn-ghost btn-small" onClick={() => setPending(null)}>취소</button>
                   <button type="submit" className="btn btn-primary btn-small" disabled={uploading}>
+                    {uploading ? '추가 중...' : '추가'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form className="reaction-sticker-form" onSubmit={handleConfirmEmoji}>
+                <input
+                  type="text" placeholder="이모지 붙여넣기" value={emojiDraft.value} maxLength={8}
+                  className="reaction-emoji-input"
+                  onChange={(e) => setEmojiDraft((p) => ({ ...p, value: e.target.value }))}
+                  autoFocus
+                />
+                <input
+                  type="text" placeholder="반응 이름 (예: 최고)" value={emojiDraft.name}
+                  onChange={(e) => setEmojiDraft((p) => ({ ...p, name: e.target.value }))}
+                />
+                {uploadError && <p className="setup-error">{uploadError}</p>}
+                <div className="reaction-sticker-actions">
+                  <button type="button" className="btn btn-ghost btn-small" onClick={() => setEmojiDraft(null)}>취소</button>
+                  <button type="submit" className="btn btn-primary btn-small" disabled={uploading || !emojiDraft.value.trim()}>
                     {uploading ? '추가 중...' : '추가'}
                   </button>
                 </div>

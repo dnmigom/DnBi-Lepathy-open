@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react'
+import AutoGrowTextarea from './AutoGrowTextarea.jsx'
 
 export default function CommentForm({ onSubmit }) {
   const [text, setText] = useState('')
@@ -22,7 +23,7 @@ export default function CommentForm({ onSubmit }) {
   }
 
   async function handleSubmit(e) {
-    e.preventDefault()
+    e?.preventDefault()
     if (!text.trim() && !file) return
     setBusy(true)
     setError(null)
@@ -46,11 +47,13 @@ export default function CommentForm({ onSubmit }) {
         </div>
       )}
       <div className="comment-form-row">
-        <input
-          type="text"
-          placeholder="댓글을 남겨보세요..."
+        <AutoGrowTextarea
+          className="comment-form-textarea"
+          placeholder="댓글을 남겨보세요... (Shift+Enter로 줄바꿈)"
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onSubmitKey={handleSubmit}
+          disabled={busy}
         />
         <label className="attach-btn" title="사진 첨부">
           사진 추가
