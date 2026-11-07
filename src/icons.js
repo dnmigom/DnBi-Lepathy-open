@@ -3,12 +3,12 @@
 // (https://fontawesome.com/search?ic=free 에서 아이콘을 고르고 class="..." 안의 값을 복사해 넣으면 돼요)
 
 export const ICONS = {
-  edit: 'fa-solid fa-house',      // 수정 (일기, 댓글)
-  delete: 'fa-solid fa-house',    // 삭제 (일기, 댓글, 설정의 멤버/반응/항목)
-  photo: 'fa-solid fa-house',     // 사진 추가 (일기 작성, 댓글)
-  submit: 'fa-solid fa-house',    // 댓글 등록
-  settings: 'fa-solid fa-house',  // 설정
-  logout: 'fa-solid fa-house',    // 로그아웃
+  edit: 'fa-regular fa-pen-to-square',      // 수정 (일기, 댓글)
+  delete: 'fa-solid fa-trash-can',    // 삭제 (일기, 댓글, 설정의 멤버/반응/항목)
+  photo: 'fa-regular fa-image',     // 사진 추가 (일기 작성, 댓글)
+  submit: 'fa-solid fa-paper-plane',    // 댓글 등록
+  settings: 'fa-solid fa-gear',  // 설정
+  logout: 'fa-solid fa-right-to-bracket',    // 로그아웃
 }
 
 // 아이콘 기본 색: 설정에서 고른 '내 색상'을 그대로 따라가요. (로그인한 사람마다 자기 색으로 보여요)
