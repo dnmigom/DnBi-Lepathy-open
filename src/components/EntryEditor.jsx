@@ -1,21 +1,26 @@
 import React, { useRef, useState } from 'react'
-import { emptyEntry, getChecklistFields, imagePath, saveEntry } from '../lib/dataModel.js'
+import { emptyEntry, getChecklistFields, imagePath, makePostId, saveEntry } from '../lib/dataModel.js'
 import { resizeImageFile } from '../lib/image.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { DIARY_WORD } from '../config.js'
 import RemoteImage from './RemoteImage.jsx'
 import HashtagInput from './HashtagInput.jsx'
+import Icon from './Icon.jsx'
 
-function hasAnyContent(content, checklist, moodTags, imageCount) {
-  const anyChecked = Object.entries(checklist).some(([key, value]) => key !== 'sleepHours' && value)
+function hasAnyContent(content, checklist, moodTags, imageCount, showChecklist) {
+  const anyChecked = showChecklist && Object.entries(checklist).some(([key, value]) => key !== 'sleepHours' && value)
   return !!content.trim()
     || anyChecked
-    || checklist.sleepHours !== ''
+    || (showChecklist && checklist.sleepHours !== '')
     || moodTags.length > 0
     || imageCount > 0
 }
 
-export default function EntryEditor({ date, memberId, initialEntry, initialSha, onSaved, onCancel }) {
+// postId가 없으면 새 글을 만들어요. showChecklist=false면 체크리스트 칸을 숨겨요
+// (체크리스트는 하루에 한 번만 쓰면 되니까 그날 첫 글에만 보여줘요).
+export default function EntryEditor({
+  date, memberId, postId = null, initialEntry, initialSha, showChecklist = true, onSaved, onCancel,
+}) {
   const auth = useAuth()
   const base = initialEntry || emptyEntry(date, memberId)
   const fields = getChecklistFields(auth.members.find((m) => m.id === memberId))
@@ -75,8 +80,10 @@ export default function EntryEditor({ date, memberId, initialEntry, initialSha, 
       }
       delete entryData.image // 예전 단일 이미지 필드는 정리
       delete entryData.mood // 예전 이모지 기분 필드는 정리
-      const { entry, sha } = await saveEntry(auth.client, date, memberId, entryData, initialSha)
-      onSaved(entry, sha)
+      if (!showChecklist) entryData.checklist = base.checklist || { sleepHours: null }
+      const targetPostId = postId || makePostId()
+      const { entry, sha } = await saveEntry(auth.client, date, memberId, targetPostId, entryData, initialSha)
+      onSaved(entry, sha, targetPostId)
     } catch (err) {
       setError(err.message || '저장에 실패했어요.')
     } finally {
@@ -100,8 +107,8 @@ export default function EntryEditor({ date, memberId, initialEntry, initialSha, 
       />
 
       <div className="image-upload-row">
-        <label className="attach-btn" title="사진 첨부">
-          사진 추가
+        <label className="attach-btn icon-btn" title="사진 추가" aria-label="사진 추가">
+          <Icon name="photo" />
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFiles} hidden />
         </label>
         {(existingImages.length > 0 || newImages.length > 0) && (
@@ -122,7 +129,7 @@ export default function EntryEditor({ date, memberId, initialEntry, initialSha, 
         )}
       </div>
 
-      <div className="checklist-row">
+      {showChecklist && <div className="checklist-row">
         {fields.map((f) => (
           <button
             type="button"
@@ -143,13 +150,13 @@ export default function EntryEditor({ date, memberId, initialEntry, initialSha, 
           />
           <span>시간</span>
         </label>
-      </div>
+      </div>}
 
       {error && <p className="setup-error">{error}</p>}
 
       <div className="entry-editor-actions">
         {onCancel && <button type="button" className="btn btn-ghost" onClick={onCancel}>취소</button>}
-        <button type="submit" className="btn btn-primary" disabled={saving || !hasAnyContent(content, checklist, moodTags, existingImages.length + newImages.length)}>
+        <button type="submit" className="btn btn-primary" disabled={saving || !hasAnyContent(content, checklist, moodTags, existingImages.length + newImages.length, showChecklist)}>
           {saving ? '저장하는 중...' : '저장하기'}
         </button>
       </div>

@@ -4,6 +4,7 @@ import Avatar from './Avatar.jsx'
 import RemoteImage from './RemoteImage.jsx'
 import Lightbox from './Lightbox.jsx'
 import AutoGrowTextarea from './AutoGrowTextarea.jsx'
+import Icon from './Icon.jsx'
 
 const LONG_PRESS_MS = 500
 const MOVE_CANCEL_PX = 24
@@ -219,14 +220,18 @@ export default function CommentList({ comments, onEditComment, onDeleteComment }
           className="comment-context-menu"
           style={{ top: menu.y, left: menu.x }}
         >
-          <button type="button" className="comment-context-menu-item" onClick={() => startEdit(menu.comment)}>
-            수정
+          <button
+            type="button" className="comment-context-menu-item" onClick={() => startEdit(menu.comment)}
+            title="수정" aria-label="수정"
+          >
+            <Icon name="edit" />
           </button>
           <button
             type="button" className="comment-context-menu-item danger"
             onClick={() => handleDelete(menu.comment.id)}
+            title="삭제" aria-label="삭제"
           >
-            삭제
+            <Icon name="delete" />
           </button>
         </div>
       )}

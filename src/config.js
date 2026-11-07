@@ -8,4 +8,15 @@ export const SITE_TITLE = '단비레파시'
 // 예: '일기' 로 바꾸면 "OO의 일지" → "OO의 일기" 처럼 화면 문구가 전부 바뀝니다.
 // 참고: 조사(이/가, 을/를 등)는 자동으로 안 바뀌니, 받침 유무가 크게 다른 단어로
 // 바꾸면 문구가 살짝 어색해질 수 있어요. ('일지'/'일기'/'다이어리'는 문제없어요)
-export const DIARY_WORD = '레파시'
+export const DIARY_WORD = '텔레파시'
+
+// ── 스레드(하루에 여러 글) 보기 설정 ──
+// 한 사람이 같은 날 여러 번 쓴 글을 어떤 순서로 이어 붙일지. false = 먼저 쓴 글이 위, true = 최근 글이 위
+export const THREAD_NEWEST_FIRST = true
+
+// 본문을 접었을 때 보여줄 미리보기 높이(px). 이보다 짧은 글은 접기 버튼이 아예 안 나와요.
+export const PREVIEW_HEIGHT_PX = 160
+
+// 한 번도 접거나 펼친 적 없는 글/댓글의 처음 상태. (한 번 누르면 그 뒤로는 마지막 상태를 기억해요)
+export const DEFAULT_BODY_OPEN = true
+export const DEFAULT_COMMENTS_OPEN = true

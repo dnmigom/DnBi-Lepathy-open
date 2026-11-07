@@ -2,7 +2,8 @@
 //   config.json                  -> { members: [{ id, displayName, color, ..., checklistFields }], customReactions: [...] }
 //                                    (체크리스트 항목은 멤버마다 따로 관리됩니다)
 //   index.json                   -> { "2026-09-13": ["minji", "yohan"], ... }  (날짜별 작성자 인덱스, 조회 속도용)
-//   entries/YYYY-MM-DD/{id}.json -> 한 사람의 그 날짜 일기
+//   entries/YYYY-MM-DD/{id}.json          -> (예전 방식) 한 사람의 그 날짜 첫 일기. 그대로 읽혀요. postId = 'main'
+//   entries/YYYY-MM-DD/{id}.{postId}.json -> (새 방식) 한 사람이 그 날짜에 쓴 일기 여러 개. 스레드로 이어 붙여 보여줘요.
 //   images/YYYY-MM-DD/{id}-xxx   -> 댓글에 첨부된 이미지
 
 export const CONFIG_PATH = 'config.json'
@@ -35,22 +36,44 @@ export function todayStr(d = new Date()) {
   return `${y}-${m}-${day}`
 }
 
-export function entryPath(date, memberId) {
-  return `entries/${date}/${memberId}.json`
+export const LEGACY_POST_ID = 'main'
+
+export function entryPath(date, memberId, postId = LEGACY_POST_ID) {
+  if (!postId || postId === LEGACY_POST_ID) return `entries/${date}/${memberId}.json`
+  return `entries/${date}/${memberId}.${postId}.json`
 }
 
 export function entryDirPath(date) {
   return `entries/${date}`
 }
 
+/** 파일 이름 → { memberId, postId }. 멤버 id에는 '.'이 들어갈 수 없어서 첫 '.'으로 나눠요. */
+export function parseEntryFilename(name) {
+  if (typeof name !== 'string' || !name.endsWith('.json')) return null
+  const stem = name.slice(0, -5)
+  const dot = stem.indexOf('.')
+  const memberId = dot === -1 ? stem : stem.slice(0, dot)
+  const postId = dot === -1 ? LEGACY_POST_ID : stem.slice(dot + 1)
+  if (!ID_RE.test(memberId) || !/^[A-Za-z0-9-]{1,60}$/.test(postId)) return null
+  return { memberId, postId }
+}
+
+/** 시간순으로 정렬되는 글 id (예: 20261107-123015-a1b2) */
+export function makePostId(d = new Date()) {
+  const p = (n) => String(n).padStart(2, '0')
+  const rand = Math.random().toString(16).slice(2, 6).padEnd(4, '0')
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}-${rand}`
+}
+
 export function imagePath(date, memberId, filename) {
   return `images/${date}/${memberId}-${Date.now()}-${filename}`
 }
 
-export function emptyEntry(date, memberId) {
+export function emptyEntry(date, memberId, postId) {
   return {
     date,
     author: memberId,
+    postId,
     moodTags: [],
     content: '',
     images: [],
@@ -207,15 +230,34 @@ async function unmarkIndexed(client, date, memberId) {
   }
 }
 
-export async function getEntry(client, date, memberId) {
-  const res = await client.getJson(entryPath(date, memberId))
-  if (!res) return null
-  return res // { json, sha }
+/** 글이 먼저 쓴 순서대로 오도록 정렬 */
+function byCreatedAt(a, b) {
+  const ta = a.json?.createdAt || ''
+  const tb = b.json?.createdAt || ''
+  if (ta !== tb) return ta < tb ? -1 : 1
+  return a.postId < b.postId ? -1 : 1
 }
 
-export async function saveEntry(client, date, memberId, entryData, sha) {
-  const payload = { ...entryData, updatedAt: new Date().toISOString() }
-  const result = await client.putJson(entryPath(date, memberId), payload, {
+/**
+ * 그 날짜의 글 목록을 불러옵니다. memberId를 주면 그 사람 글만.
+ * 반환: [{ memberId, postId, json, sha }] (먼저 쓴 글이 앞)
+ */
+export async function listPosts(client, date, memberId = null) {
+  const files = await client.listDir(entryDirPath(date))
+  const targets = files
+    .filter((f) => f.type === 'file')
+    .map((f) => parseEntryFilename(f.name))
+    .filter((p) => p && (!memberId || p.memberId === memberId))
+  const loaded = await Promise.all(targets.map(async (t) => {
+    const res = await client.getJson(entryPath(date, t.memberId, t.postId))
+    return res ? { ...t, json: res.json, sha: res.sha } : null
+  }))
+  return loaded.filter(Boolean).sort(byCreatedAt)
+}
+
+export async function saveEntry(client, date, memberId, postId, entryData, sha) {
+  const payload = { ...entryData, postId, updatedAt: new Date().toISOString() }
+  const result = await client.putJson(entryPath(date, memberId, postId), payload, {
     sha,
     message: `${memberId}의 ${date} 일기`,
   })
@@ -223,9 +265,10 @@ export async function saveEntry(client, date, memberId, entryData, sha) {
   return { entry: payload, sha: result?.content?.sha }
 }
 
-export async function deleteEntry(client, date, memberId, sha) {
-  await client.deleteFile(entryPath(date, memberId), sha, { message: `${memberId}의 ${date} 일기 삭제` })
-  await unmarkIndexed(client, date, memberId)
+/** keepIndexed: 그 날 이 사람의 다른 글이 아직 남아 있으면 true (캘린더 점을 지우지 않음) */
+export async function deleteEntry(client, date, memberId, postId, sha, { keepIndexed = false } = {}) {
+  await client.deleteFile(entryPath(date, memberId, postId), sha, { message: `${memberId}의 ${date} 일기 삭제` })
+  if (!keepIndexed) await unmarkIndexed(client, date, memberId)
 }
 
 export async function listDatesForMember(client, memberId) {

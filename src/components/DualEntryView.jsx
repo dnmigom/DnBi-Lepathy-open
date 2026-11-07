@@ -1,82 +1,47 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
-import { getEntry } from '../lib/dataModel.js'
-import { DIARY_WORD } from '../config.js'
-import EntryCard from './EntryCard.jsx'
-import EntryEditor from './EntryEditor.jsx'
-import Avatar from './Avatar.jsx'
+import { listPosts } from '../lib/dataModel.js'
+import EntryThread from './EntryThread.jsx'
 
 export default function DualEntryView({ date, onChanged }) {
   const auth = useAuth()
-  const [slots, setSlots] = useState({}) // memberId -> { entry, sha } | null | undefined(loading)
+  const [posts, setPosts] = useState(undefined) // undefined = 불러오는 중, [] = 없음
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     let cancelled = false
-    setSlots({})
-    auth.members.forEach((m) => {
-      getEntry(auth.client, date, m.id).then((res) => {
-        if (cancelled) return
-        setSlots((prev) => ({ ...prev, [m.id]: res || null }))
-      })
-    })
+    setPosts(undefined)
+    setError(null)
+    listPosts(auth.client, date)
+      .then((list) => { if (!cancelled) setPosts(list) })
+      .catch((e) => { if (!cancelled) { setPosts([]); setError(e.message || '불러오지 못했어요.') } })
     return () => { cancelled = true }
   }, [date, auth.members.length])
 
   return (
     <div className="dual-view">
-      {auth.members.map((m) => {
-        const slot = slots[m.id]
-        return (
-          <div className="dual-column" key={m.id}>
-            {slot === undefined ? (
-              <div className="card skeleton-card" />
-            ) : slot === null ? (
-              <EmptySlot member={m} date={date} onCreated={(entry, sha) => {
-                setSlots((prev) => ({ ...prev, [m.id]: { json: entry, sha } }))
+      {error && <p className="setup-error">{error}</p>}
+      {auth.members.map((m) => (
+        <div className="dual-column" key={m.id}>
+          {posts === undefined ? (
+            <div className="card skeleton-card" />
+          ) : (
+            <EntryThread
+              member={m}
+              date={date}
+              posts={posts.filter((p) => p.memberId === m.id)}
+              onAdded={(post) => {
+                setPosts((prev) => [...(prev || []), post])
                 onChanged?.()
-              }} />
-            ) : (
-              <EntryCard
-                entry={slot.json} sha={slot.sha} date={date} memberId={m.id}
-                onDeleted={() => {
-                  setSlots((prev) => ({ ...prev, [m.id]: null }))
-                  onChanged?.()
-                }}
-              />
-            )}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function EmptySlot({ member, date, onCreated }) {
-  const auth = useAuth()
-  const isMine = auth.currentMember?.id === member.id
-
-  if (!isMine) {
-    return (
-      <div className="card empty-slot">
-        <Avatar member={member} />
-        <p>{member.displayName}님이 아직 이 날의 {DIARY_WORD}를 쓰지 않았어요.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="card empty-slot mine">
-      <div className="entry-card-who">
-        <Avatar member={member} />
-        <div className="entry-card-name">{member.displayName}</div>
-      </div>
-      <EntryEditor
-        date={date}
-        memberId={member.id}
-        initialEntry={null}
-        initialSha={undefined}
-        onSaved={(entry, sha) => onCreated(entry, sha)}
-      />
+              }}
+              onRemoved={(postId) => {
+                setPosts((prev) => (prev || []).filter((p) => !(p.memberId === m.id && p.postId === postId)))
+                onChanged?.()
+              }}
+            />
+          )}
+        </div>
+      ))}
     </div>
   )
 }

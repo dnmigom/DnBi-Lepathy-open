@@ -4,6 +4,7 @@ import { addMember, addChecklistField, getChecklistFields, removeChecklistField,
 import { DIARY_WORD } from '../config.js'
 import { ColorPicker, BG_PALETTE } from './Setup.jsx'
 import AvatarPicker from './AvatarPicker.jsx'
+import Icon from './Icon.jsx'
 import Avatar from './Avatar.jsx'
 
 export default function SettingsModal({ onClose }) {
@@ -197,11 +198,12 @@ export default function SettingsModal({ onClose }) {
                 {m.id === auth.currentMember?.id && <span className="me-badge">나</span>}
                 <button
                   type="button"
-                  className="btn btn-ghost btn-small btn-danger settings-member-remove"
+                  className="btn btn-ghost btn-small btn-danger settings-member-remove icon-btn"
+                  title="삭제" aria-label="삭제"
                   onClick={() => handleRemoveMember(m)}
                   disabled={removingId === m.id}
                 >
-                  {removingId === m.id ? '삭제 중...' : '삭제'}
+                  <Icon name="delete" />
                 </button>
               </li>
             ))}
@@ -242,11 +244,12 @@ export default function SettingsModal({ onClose }) {
                   <span className="settings-member-name">{r.name}</span>
                   <button
                     type="button"
-                    className="btn btn-ghost btn-small btn-danger settings-member-remove"
+                    className="btn btn-ghost btn-small btn-danger settings-member-remove icon-btn"
+                    title="삭제" aria-label="삭제"
                     onClick={() => handleRemoveCustomReaction(r)}
                     disabled={removingReactionId === r.id}
                   >
-                    {removingReactionId === r.id ? '삭제 중...' : '삭제'}
+                    <Icon name="delete" />
                   </button>
                 </li>
               ))}
@@ -264,11 +267,12 @@ export default function SettingsModal({ onClose }) {
                 <span className="settings-member-name">{f.label}</span>
                 <button
                   type="button"
-                  className="btn btn-ghost btn-small btn-danger settings-member-remove"
+                  className="btn btn-ghost btn-small btn-danger settings-member-remove icon-btn"
+                  title="삭제" aria-label="삭제"
                   onClick={() => handleRemoveField(f)}
                   disabled={removingFieldKey === f.key}
                 >
-                  {removingFieldKey === f.key ? '삭제 중...' : '삭제'}
+                  <Icon name="delete" />
                 </button>
               </li>
             ))}
@@ -325,7 +329,9 @@ export default function SettingsModal({ onClose }) {
         <section className="modal-section">
           <h3>저장소</h3>
           <p className="settings-repo-info">{auth.session.owner}/{auth.session.repo}</p>
-          <button className="btn btn-small" onClick={auth.logout}>로그아웃 (연결 해제)</button>
+          <button className="btn btn-small icon-btn" onClick={auth.logout} title="로그아웃 (연결 해제)" aria-label="로그아웃">
+            <Icon name="logout" />
+          </button>
         </section>
       </div>
     </div>

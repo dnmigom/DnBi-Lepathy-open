@@ -122,7 +122,8 @@ export function createClient({ owner, repo, token }) {
 
     /** 폴더 목록 조회. 없으면 빈 배열 */
     async listDir(path) {
-      const { status, data } = await request(`${base}/contents/${safeContentsPath(path)}`)
+      // 새 글을 쓴 직후에도 목록이 바로 반영되도록 브라우저 캐시를 매번 재검증해요.
+      const { status, data } = await request(`${base}/contents/${safeContentsPath(path)}`, { cache: 'no-cache' })
       if (status === 404 || !data) return []
       return Array.isArray(data) ? data : [data]
     },

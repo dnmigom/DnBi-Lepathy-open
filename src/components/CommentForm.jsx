@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react'
 import AutoGrowTextarea from './AutoGrowTextarea.jsx'
+import Icon from './Icon.jsx'
 
 export default function CommentForm({ onSubmit }) {
   const [text, setText] = useState('')
@@ -55,12 +56,15 @@ export default function CommentForm({ onSubmit }) {
           onSubmitKey={handleSubmit}
           disabled={busy}
         />
-        <label className="attach-btn" title="사진 첨부">
-          사진 추가
+        <label className="attach-btn icon-btn" title="사진 추가" aria-label="사진 추가">
+          <Icon name="photo" />
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFile} hidden />
         </label>
-        <button className="btn btn-primary" type="submit" disabled={busy || (!text.trim() && !file)}>
-          {busy ? '올리는 중...' : '등록'}
+        <button
+          className="btn btn-primary icon-btn" type="submit" disabled={busy || (!text.trim() && !file)}
+          title={busy ? '올리는 중...' : '등록'} aria-label="등록" aria-busy={busy}
+        >
+          <Icon name="submit" />
         </button>
       </div>
       {error && <p className="setup-error">{error}</p>}

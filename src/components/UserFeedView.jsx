@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
-import { getEntry, listDatesForMember } from '../lib/dataModel.js'
+import { listDatesForMember, listPosts } from '../lib/dataModel.js'
 import { DIARY_WORD } from '../config.js'
-import EntryCard from './EntryCard.jsx'
+import EntryThread from './EntryThread.jsx'
 
 const PAGE_SIZE = 8
 
@@ -10,13 +10,13 @@ export default function UserFeedView({ memberId }) {
   const auth = useAuth()
   const [dates, setDates] = useState([])
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-  const [entries, setEntries] = useState({}) // date -> { entry, sha } | 'loading'
+  const [threads, setThreads] = useState({}) // date -> [posts] | 'loading'
   const [loadingDates, setLoadingDates] = useState(true)
 
   useEffect(() => {
     setDates([])
     setVisibleCount(PAGE_SIZE)
-    setEntries({})
+    setThreads({})
     setLoadingDates(true)
     listDatesForMember(auth.client, memberId).then((ds) => {
       setDates(ds) // 최신 날짜가 먼저 오도록 정렬되어 있음
@@ -28,16 +28,25 @@ export default function UserFeedView({ memberId }) {
 
   useEffect(() => {
     visibleDates.forEach((date) => {
-      if (entries[date]) return
-      setEntries((prev) => ({ ...prev, [date]: 'loading' }))
-      getEntry(auth.client, date, memberId).then((res) => {
-        setEntries((prev) => ({ ...prev, [date]: res }))
-      })
+      if (threads[date]) return
+      setThreads((prev) => ({ ...prev, [date]: 'loading' }))
+      listPosts(auth.client, date, memberId)
+        .then((list) => setThreads((prev) => ({ ...prev, [date]: list })))
+        .catch(() => setThreads((prev) => ({ ...prev, [date]: [] })))
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleDates.join(','), memberId])
 
   const member = auth.members.find((m) => m.id === memberId)
+
+  function removeDate(date) {
+    setDates((prev) => prev.filter((d) => d !== date))
+    setThreads((prev) => {
+      const next = { ...prev }
+      delete next[date]
+      return next
+    })
+  }
 
   return (
     <div className="feed-view">
@@ -50,26 +59,24 @@ export default function UserFeedView({ memberId }) {
       )}
 
       <div className="feed-list">
-        {visibleDates.map((date) => {
-          const slot = entries[date]
-          if (!slot || slot === 'loading') {
+        {member && visibleDates.map((date) => {
+          const list = threads[date]
+          if (!list || list === 'loading') {
             return <div className="card skeleton-card" key={date} />
           }
+          if (list.length === 0) return null
           return (
-            <EntryCard
+            <EntryThread
               key={date}
+              member={member}
               date={date}
-              memberId={memberId}
-              entry={slot.json}
-              sha={slot.sha}
+              posts={list}
               showDate
-              onDeleted={() => {
-                setDates((prev) => prev.filter((d) => d !== date))
-                setEntries((prev) => {
-                  const next = { ...prev }
-                  delete next[date]
-                  return next
-                })
+              onAdded={(post) => setThreads((prev) => ({ ...prev, [date]: [...(prev[date] || []), post] }))}
+              onRemoved={(postId) => {
+                const rest = list.filter((p) => p.postId !== postId)
+                if (rest.length === 0) removeDate(date)
+                else setThreads((prev) => ({ ...prev, [date]: rest }))
               }}
             />
           )

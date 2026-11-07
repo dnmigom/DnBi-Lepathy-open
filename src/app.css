@@ -46,7 +46,7 @@
   padding: 2px 8px; border-radius: var(--radius-pill); font-weight: 700; flex-shrink: 0;
 }
 
-.sidebar-bottom { display: flex; flex-direction: column; gap: 6px; }
+.sidebar-bottom { display: flex; flex-direction: row; gap: 6px; }
 
 .main-area { flex: 1; min-width: 0; padding: 28px clamp(16px, 4vw, 40px); }
 
@@ -294,12 +294,13 @@
 
 .comment-context-menu {
   position: fixed; z-index: 120; background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: 6px; min-width: 110px;
-  display: flex; flex-direction: column; gap: 2px;
+  border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: 4px;
+  display: flex; flex-direction: row; gap: 2px;
 }
 .comment-context-menu-item {
-  border: none; background: transparent; text-align: left; font-size: 13px; font-weight: 600;
-  color: var(--ink); padding: 8px 10px; border-radius: 8px;
+  border: none; background: transparent; font-size: 15px; font-weight: 600;
+  color: var(--ink); width: 36px; height: 36px; padding: 0; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .comment-context-menu-item:hover { background: var(--surface-sunken); }
 .comment-context-menu-item.danger { color: var(--danger); }
@@ -400,3 +401,61 @@
 }
 .remember-row { flex-direction: row !important; align-items: flex-start; gap: 8px; font-size: 13px; }
 .remember-row input { width: auto; margin-top: 3px; }
+
+/* ---------- 아이콘 버튼 (Font Awesome) ---------- */
+.app-icon { font-size: 15px; line-height: 1; }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 36px; min-height: 36px; padding: 8px 10px;
+}
+.btn-small.icon-btn { min-width: 32px; min-height: 32px; padding: 6px 8px; }
+.icon-btn:disabled { opacity: 0.45; cursor: default; }
+.attach-btn.icon-btn { padding: 8px 12px; }
+.comment-form-row .icon-btn { align-self: flex-end; }
+
+/* ---------- 스레드 (하루에 여러 글) ---------- */
+.thread { gap: 14px; }
+.thread-count {
+  font-size: 12px; font-weight: 700; color: var(--author-color);
+  background: var(--surface-sunken); padding: 4px 10px; border-radius: var(--radius-pill);
+}
+.thread-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.thread-item {
+  position: relative; padding: 0 0 22px 20px; margin-left: 6px;
+  border-left: 2px solid color-mix(in srgb, var(--author-color) 30%, transparent);
+}
+.thread-item::before {
+  content: ''; position: absolute; left: -7px; top: 10px; width: 12px; height: 12px; border-radius: 50%;
+  background: #fff; border: 2px solid var(--author-color);
+}
+.thread-item:last-child { border-left-color: transparent; padding-bottom: 0; }
+
+.entry-post { border-top: 1px dashed var(--line); padding-top: 18px; margin-top: -18px; }
+
+.entry-post { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.entry-post-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; }
+.entry-post-time { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+
+.entry-body { position: relative; overflow: hidden; }
+.entry-body > div { display: flex; flex-direction: column; gap: 12px; }
+.entry-body.collapsed::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 56px; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), #ffffff);
+}
+.fold-toggle, .comment-toggle {
+  border: none; background: transparent; padding: 4px 2px; font-size: 13px; font-weight: 700;
+  color: var(--author-color, var(--accent)); align-self: flex-start;
+}
+.fold-toggle:hover, .comment-toggle:hover { text-decoration: underline; }
+.fold-toggle { margin-top: -6px; }
+
+.entry-post-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.comment-toggle { margin-left: auto; color: var(--ink-soft); }
+.comment-toggle.open { color: var(--author-color, var(--accent)); }
+
+.thread-composer { border-top: 1px solid var(--line); padding-top: 14px; }
+.thread-add-btn {
+  border: 1px dashed var(--line); background: transparent; border-radius: var(--radius-md);
+  padding: 10px; font-size: 13px; font-weight: 700; color: var(--ink-soft);
+}
+.thread-add-btn:hover { background: var(--surface-sunken); color: var(--author-color); }

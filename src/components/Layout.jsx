@@ -2,6 +2,7 @@ import React from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { SITE_TITLE } from '../config.js'
 import Avatar from './Avatar.jsx'
+import Icon from './Icon.jsx'
 
 export default function Layout({ activeMemberId, onSelectMember, onOpenSettings, children }) {
   const auth = useAuth()
@@ -57,8 +58,12 @@ export default function Layout({ activeMemberId, onSelectMember, onOpenSettings,
         </div>
 
         <div className="sidebar-bottom">
-          <button className="btn btn-ghost" onClick={onOpenSettings}>설정</button>
-          <button className="btn btn-ghost" onClick={auth.logout}>로그아웃</button>
+          <button className="btn btn-ghost icon-btn" onClick={onOpenSettings} title="설정" aria-label="설정">
+            <Icon name="settings" />
+          </button>
+          <button className="btn btn-ghost icon-btn" onClick={auth.logout} title="로그아웃" aria-label="로그아웃">
+            <Icon name="logout" />
+          </button>
         </div>
       </aside>
 
