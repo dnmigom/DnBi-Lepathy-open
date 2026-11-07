@@ -430,8 +430,6 @@
 }
 .thread-item:last-child { border-left-color: transparent; padding-bottom: 0; }
 
-.entry-post { border-top: 1px dashed var(--line); padding-top: 18px; margin-top: -18px; }
-
 .entry-post { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .entry-post-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; }
 .entry-post-time { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
