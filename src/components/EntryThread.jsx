@@ -58,7 +58,13 @@ export default function EntryThread({ member, date, posts, showDate = false, onA
         {posts.length > 1 && <span className="thread-count">{posts.length}개의 {DIARY_WORD}</span>}
       </header>
 
-      {THREAD_NEWEST_FIRST && showComposer && !empty && composer}
+      {/* 이어서 쓰기 버튼과 작성칸은 항상 스레드 맨 위(이름 바로 아래)에 있어요 */}
+      {isMine && !empty && !composing && (
+        <button type="button" className="thread-add-btn" onClick={() => setComposing(true)}>
+          + 이어서 쓰기
+        </button>
+      )}
+      {showComposer && composer}
 
       {!empty && (
         <ol className="thread-list">
@@ -79,13 +85,6 @@ export default function EntryThread({ member, date, posts, showDate = false, onA
         </ol>
       )}
 
-      {(!THREAD_NEWEST_FIRST || empty) && showComposer && composer}
-
-      {isMine && !empty && !composing && (
-        <button type="button" className="thread-add-btn" onClick={() => setComposing(true)}>
-          + 이어서 쓰기
-        </button>
-      )}
     </section>
   )
 }

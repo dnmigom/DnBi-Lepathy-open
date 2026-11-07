@@ -451,9 +451,10 @@
 .comment-toggle { margin-left: auto; color: var(--ink-soft); }
 .comment-toggle.open { color: var(--author-color, var(--accent)); }
 
-.thread-composer { border-top: 1px solid var(--line); padding-top: 14px; }
+.thread-composer { border-bottom: 1px solid var(--line); padding-bottom: 14px; }
 .thread-add-btn {
   border: 1px dashed var(--line); background: transparent; border-radius: var(--radius-md);
   padding: 10px; font-size: 13px; font-weight: 700; color: var(--ink-soft);
 }
 .thread-add-btn:hover { background: var(--surface-sunken); color: var(--author-color); }
+.thread-composer:last-child { border-bottom: none; padding-bottom: 0; }
