@@ -8,10 +8,9 @@ import HashtagInput from './HashtagInput.jsx'
 import Icon from './Icon.jsx'
 
 function hasAnyContent(content, checklist, moodTags, imageCount, showChecklist) {
-  const anyChecked = showChecklist && Object.entries(checklist).some(([key, value]) => key !== 'sleepHours' && value)
+  const anyChecked = showChecklist && Object.values(checklist).some(Boolean)
   return !!content.trim()
     || anyChecked
-    || (showChecklist && checklist.sleepHours !== '')
     || moodTags.length > 0
     || imageCount > 0
 }
@@ -27,7 +26,7 @@ export default function EntryEditor({
   const [content, setContent] = useState(base.content || '')
   const [moodTags, setMoodTags] = useState(base.moodTags || [])
   const [checklist, setChecklist] = useState(() => {
-    const initial = { sleepHours: base.checklist?.sleepHours ?? '' }
+    const initial = {}
     fields.forEach((f) => { initial[f.key] = !!base.checklist?.[f.key] })
     return initial
   })
@@ -73,14 +72,12 @@ export default function EntryEditor({
         content: content.trim(),
         moodTags,
         images: [...existingImages, ...uploadedPaths],
-        checklist: {
-          ...checklist,
-          sleepHours: checklist.sleepHours === '' ? null : Number(checklist.sleepHours),
-        },
+        checklist: { ...checklist },
       }
       delete entryData.image // 예전 단일 이미지 필드는 정리
       delete entryData.mood // 예전 이모지 기분 필드는 정리
-      if (!showChecklist) entryData.checklist = base.checklist || { sleepHours: null }
+      if (!showChecklist) entryData.checklist = { ...(base.checklist || {}) }
+      delete entryData.checklist.sleepHours // 수면 시간 기능은 삭제됨 (예전 기록도 저장할 때 정리)
       const targetPostId = postId || makePostId()
       const { entry, sha } = await saveEntry(auth.client, date, memberId, targetPostId, entryData, initialSha)
       onSaved(entry, sha, targetPostId)
@@ -140,16 +137,6 @@ export default function EntryEditor({
             <span>{f.icon}</span> {f.label}
           </button>
         ))}
-        <label className="sleep-input">
-          <span>수면</span>
-          <input
-            type="number" min="0" max="24" step="0.5"
-            placeholder="시간"
-            value={checklist.sleepHours}
-            onChange={(e) => setChecklist((prev) => ({ ...prev, sleepHours: e.target.value }))}
-          />
-          <span>시간</span>
-        </label>
       </div>}
 
       {error && <p className="setup-error">{error}</p>}

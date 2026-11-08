@@ -19,7 +19,11 @@ function Shell() {
       document.documentElement.style.setProperty('--accent', auth.currentMember.color)
       document.documentElement.style.setProperty('--accent-soft', `${auth.currentMember.color}22`)
     }
-    document.documentElement.style.setProperty('--bg-gradient', auth.currentMember?.bgColor || DEFAULT_BG_GRADIENT)
+    const bg = auth.currentMember?.bgColor
+    document.documentElement.style.setProperty('--bg-gradient', bg || DEFAULT_BG_GRADIENT)
+    // 단색 배경이면 버튼 hover·테두리·카드 그라데이션 같은 옅은 색들도 이 색을 따라가요.
+    if (bg && bg.startsWith('#')) document.documentElement.style.setProperty('--bg-solid', bg)
+    else document.documentElement.style.removeProperty('--bg-solid')
   }, [auth.currentMember?.color, auth.currentMember?.bgColor])
 
   // 멤버가 삭제되는 등으로 더 이상 존재하지 않으면 캘린더 보기로 되돌립니다.

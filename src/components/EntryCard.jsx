@@ -109,11 +109,10 @@ export default function EntryCard({
     }
   }
 
-  const sleepHours = entry.checklist?.sleepHours
   const images = entry.images || (entry.image ? [entry.image] : [])
   const commentCount = entry.comments?.length || 0
   const collapsed = canFold && !bodyOpen
-  const hasChecklistData = getChecklistFields(author).some((f) => entry.checklist?.[f.key]) || sleepHours != null
+  const hasChecklistData = getChecklistFields(author).some((f) => entry.checklist?.[f.key])
 
   return (
     <article className="entry-post">
@@ -168,7 +167,6 @@ export default function EntryCard({
                   </span>
                 )
               })}
-              {sleepHours != null && <span className="chip checklist-status">{sleepHours}시간 수면</span>}
             </div>
           )}
 

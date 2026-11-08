@@ -77,9 +77,7 @@ export function emptyEntry(date, memberId, postId) {
     moodTags: [],
     content: '',
     images: [],
-    checklist: {
-      sleepHours: null,
-    },
+    checklist: {},
     reactions: {},
     comments: [],
     createdAt: new Date().toISOString(),
