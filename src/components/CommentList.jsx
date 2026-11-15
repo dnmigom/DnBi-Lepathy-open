@@ -175,7 +175,7 @@ export default function CommentList({ comments, onEditComment, onDeleteComment }
               <Avatar member={member} size={26} />
               <div className="comment-body">
                 <div className="comment-meta">
-                  <span className="comment-author">{member?.displayName || c.author}</span>
+                  <span className="comment-author" style={member?.color ? { color: member.color } : undefined}>{member?.displayName || c.author}</span>
                   <span className="comment-time">{formatTime(c.createdAt)}</span>
                 </div>
 

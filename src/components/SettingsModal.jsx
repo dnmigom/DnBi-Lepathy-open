@@ -12,6 +12,9 @@ export default function SettingsModal({ onClose }) {
   const [color, setColor] = useState(auth.currentMember?.color)
   const [bgColor, setBgColor] = useState(auth.currentMember?.bgColor || BG_PALETTE[0])
   const [avatar, setAvatar] = useState(auth.currentMember?.avatar || null)
+  // 모두의 일기에서 맨 앞(PC 왼쪽, 모바일 위)에 보일 사람. 사람마다 따로 저장돼요.
+  const savedFrontId = auth.currentMember?.frontMemberId || ''
+  const [frontMemberId, setFrontMemberId] = useState(savedFrontId)
   const [savingProfile, setSavingProfile] = useState(false)
 
   const [tokenInput, setTokenInput] = useState('')
@@ -41,11 +44,12 @@ export default function SettingsModal({ onClose }) {
   const profileChanged = color !== auth.currentMember?.color
     || avatar !== (auth.currentMember?.avatar || null)
     || bgColor !== (auth.currentMember?.bgColor || BG_PALETTE[0])
+    || frontMemberId !== savedFrontId
 
   async function handleSaveProfile() {
     setSavingProfile(true)
     try {
-      const updated = await updateMember(auth.client, auth.config, auth.configSha, auth.currentMember.id, { color, bgColor, avatar })
+      const updated = await updateMember(auth.client, auth.config, auth.configSha, auth.currentMember.id, { color, bgColor, avatar, frontMemberId: frontMemberId || null })
       auth.setConfig(updated)
       await auth.refreshConfig()
     } finally {
@@ -183,6 +187,20 @@ export default function SettingsModal({ onClose }) {
           />
           <ColorPicker value={color} onChange={setColor} />
           <ColorPicker value={bgColor} onChange={setBgColor} label="배경색" palette={BG_PALETTE} />
+          {auth.members.length > 1 && (
+            <label className="settings-front-member">
+              <span>모두의 {DIARY_WORD}에서 먼저 보일 사람</span>
+              <select value={frontMemberId} onChange={(e) => setFrontMemberId(e.target.value)}>
+                <option value="">기본 순서 (멤버 목록 순)</option>
+                {auth.members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.displayName}{m.id === auth.currentMember?.id ? ' (나)' : ''}
+                  </option>
+                ))}
+              </select>
+              <small>PC에서는 왼쪽, 모바일에서는 맨 위에 보여요. 나에게만 적용돼요.</small>
+            </label>
+          )}
           <button className="btn btn-primary btn-small" onClick={handleSaveProfile} disabled={savingProfile || !profileChanged}>
             {savingProfile ? '저장 중...' : '프로필 저장'}
           </button>

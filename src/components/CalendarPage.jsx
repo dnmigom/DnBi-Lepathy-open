@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
-import { loadIndex, todayStr } from '../lib/dataModel.js'
+import { loadIndex } from '../lib/dataModel.js'
+import { formatDateHeading } from '../lib/format.js'
 import Calendar from './Calendar.jsx'
 import DualEntryView from './DualEntryView.jsx'
 
-export default function CalendarPage() {
+// 선택한 날짜는 App이 관리해요. (검색 결과를 누르면 그 날짜로 바로 이동할 수 있도록)
+export default function CalendarPage({ selectedDate, onSelectDate }) {
   const auth = useAuth()
   const [index, setIndex] = useState({})
-  const [selectedDate, setSelectedDate] = useState(todayStr())
 
   const refreshIndex = useCallback(async () => {
     const { json } = await loadIndex(auth.client)
@@ -18,18 +19,11 @@ export default function CalendarPage() {
 
   return (
     <div className="calendar-page">
-      <Calendar index={index} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+      <Calendar index={index} selectedDate={selectedDate} onSelectDate={onSelectDate} />
       <div className="calendar-detail">
-        <h2 className="detail-heading">{formatHeading(selectedDate)}</h2>
+        <h2 className="detail-heading">{formatDateHeading(selectedDate)}</h2>
         <DualEntryView date={selectedDate} onChanged={refreshIndex} />
       </div>
     </div>
   )
-}
-
-function formatHeading(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const date = new Date(y, m - 1, d)
-  const weekday = ['일', '월', '화', '수', '목', '금', '토'][date.getDay()]
-  return `${y}년 ${m}월 ${d}일 (${weekday})`
 }

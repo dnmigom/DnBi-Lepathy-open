@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
-import { listPosts } from '../lib/dataModel.js'
+import { listPosts, orderMembersFor } from '../lib/dataModel.js'
 import EntryThread from './EntryThread.jsx'
 
 export default function DualEntryView({ date, onChanged }) {
@@ -21,7 +21,7 @@ export default function DualEntryView({ date, onChanged }) {
   return (
     <div className="dual-view">
       {error && <p className="setup-error">{error}</p>}
-      {auth.members.map((m) => (
+      {orderMembersFor(auth.members, auth.currentMember).map((m) => (
         <div className="dual-column" key={m.id}>
           {posts === undefined ? (
             <div className="card skeleton-card" />

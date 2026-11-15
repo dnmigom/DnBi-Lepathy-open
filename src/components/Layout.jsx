@@ -5,7 +5,7 @@ import Avatar from './Avatar.jsx'
 import Icon from './Icon.jsx'
 
 // 화면 구성: 맨 위 가운데에 제목, 오른쪽 위에 [모아보기 선택 · 설정 · 로그아웃] 버튼.
-export default function Layout({ activeMemberId, onSelectMember, onOpenSettings, children }) {
+export default function Layout({ activeMemberId, onSelectMember, onOpenSettings, onOpenSearch, children }) {
   const auth = useAuth()
 
   return (
@@ -23,6 +23,9 @@ export default function Layout({ activeMemberId, onSelectMember, onOpenSettings,
           {SITE_TITLE}
         </button>
         <div className="topbar-actions">
+          <button className="round-btn" onClick={onOpenSearch} title="검색" aria-label="검색">
+            <Icon name="search" />
+          </button>
           <MemberMenu activeMemberId={activeMemberId} onSelectMember={onSelectMember} />
           <button className="round-btn" onClick={onOpenSettings} title="설정" aria-label="설정">
             <Icon name="settings" />
@@ -38,7 +41,7 @@ export default function Layout({ activeMemberId, onSelectMember, onOpenSettings,
   )
 }
 
-// 동그란 버튼을 누르면 '홈(캘린더)'과 멤버 목록이 아래로 펼쳐져요.
+// 동그란 버튼을 누르면 '단비레파시'(모두의 일기 달력)와 멤버 목록이 아래로 펼쳐져요.
 function MemberMenu({ activeMemberId, onSelectMember }) {
   const auth = useAuth()
   const [open, setOpen] = useState(false)
@@ -74,12 +77,12 @@ function MemberMenu({ activeMemberId, onSelectMember }) {
         className={`round-btn member-menu-trigger ${active ? 'has-member' : ''}`}
         style={active ? { '--author-color': active.color } : undefined}
         onClick={() => setOpen((v) => !v)}
-        title={active ? `${active.displayName}의 글 모아보는 중` : '모아볼 사람 고르기'}
+        title={active ? `${active.displayName}의 글 모아보는 중` : `${SITE_TITLE} (모두의 일기)`}
         aria-label="모아볼 사람 고르기"
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        {active ? <Avatar member={active} size={34} /> : <HomeIcon />}
+        {active ? <Avatar member={active} size={34} /> : <Icon name="home" />}
       </button>
 
       {open && (
@@ -89,8 +92,8 @@ function MemberMenu({ activeMemberId, onSelectMember }) {
             className={`member-nav-item ${activeMemberId === null ? 'active' : ''}`}
             onClick={() => pick(null)}
           >
-            <span className="home-nav-icon" aria-hidden="true"><HomeIcon /></span>
-            <span className="member-nav-name">홈 (캘린더)</span>
+            <span className="home-nav-icon" aria-hidden="true"><Icon name="home" /></span>
+            <span className="member-nav-name">{SITE_TITLE}</span>
           </button>
           {auth.members.map((m) => (
             <button
@@ -109,16 +112,5 @@ function MemberMenu({ activeMemberId, onSelectMember }) {
         </div>
       )}
     </div>
-  )
-}
-
-function HomeIcon() {
-  return (
-    <svg className="home-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path
-        d="M4 10.8 12 4l8 6.8V19a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-8.2Z"
-        stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round"
-      />
-    </svg>
   )
 }

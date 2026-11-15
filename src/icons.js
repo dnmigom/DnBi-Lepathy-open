@@ -9,6 +9,8 @@ export const ICONS = {
   submit: 'fa-solid fa-paper-plane',    // 댓글 등록
   settings: 'fa-solid fa-gear',  // 설정
   logout: 'fa-solid fa-right-to-bracket',    // 로그아웃
+  home: 'fa-solid fa-satellite-dish',   // 홈(달력) 버튼, 모아보기 메뉴의 '단비레파시' 항목
+  search: 'fa-solid fa-magnifying-glass', // 검색
 }
 
 // 아이콘 기본 색: 설정에서 고른 '내 색상'을 그대로 따라가요. (로그인한 사람마다 자기 색으로 보여요)

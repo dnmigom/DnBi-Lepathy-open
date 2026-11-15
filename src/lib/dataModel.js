@@ -139,6 +139,16 @@ export async function addMember(client, currentConfig, currentSha, newMember) {
   return updated
 }
 
+/**
+ * 모두의 일기를 볼 때 칸 순서. 보는 사람(viewer)이 설정에서 고른 '먼저 보일 사람'이 맨 앞(PC 왼쪽, 모바일 위),
+ * 나머지는 멤버 목록 순서 그대로예요. 고른 적이 없으면 멤버 목록 순서.
+ */
+export function orderMembersFor(members, viewer) {
+  const frontId = viewer?.frontMemberId
+  if (!frontId || !members.some((m) => m.id === frontId)) return members
+  return [...members.filter((m) => m.id === frontId), ...members.filter((m) => m.id !== frontId)]
+}
+
 export async function updateMember(client, currentConfig, currentSha, memberId, patch) {
   const updated = {
     ...currentConfig,

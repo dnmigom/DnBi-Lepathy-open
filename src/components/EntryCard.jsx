@@ -6,6 +6,7 @@ import {
 } from '../lib/dataModel.js'
 import { resizeImageFile } from '../lib/image.js'
 import { clearFoldState, useFoldState } from '../lib/foldState.js'
+import { formatClock, postDomId } from '../lib/format.js'
 import { DEFAULT_BODY_OPEN, DEFAULT_COMMENTS_OPEN, PREVIEW_HEIGHT_PX } from '../config.js'
 import RemoteImage from './RemoteImage.jsx'
 import Lightbox from './Lightbox.jsx'
@@ -115,9 +116,9 @@ export default function EntryCard({
   const hasChecklistData = getChecklistFields(author).some((f) => entry.checklist?.[f.key])
 
   return (
-    <article className="entry-post">
+    <article className="entry-post" id={postDomId(date, memberId, postId)}>
       <header className="entry-post-header">
-        <span className="entry-post-time">{formatTime(entry.createdAt)}</span>
+        <span className="entry-post-time">{formatClock(entry.createdAt)}</span>
         {isMine && !editing && (
           <div className="entry-card-actions">
             <button
@@ -228,11 +229,4 @@ export default function EntryCard({
       <Lightbox path={lightboxPath} onClose={() => setLightboxPath(null)} />
     </article>
   )
-}
-
-function formatTime(iso) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }

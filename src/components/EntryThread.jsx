@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { DIARY_WORD, THREAD_NEWEST_FIRST } from '../config.js'
 import Avatar from './Avatar.jsx'
+import { memberThemeStyle } from '../lib/theme.js'
 import EntryCard from './EntryCard.jsx'
 import EntryEditor from './EntryEditor.jsx'
 
@@ -19,7 +20,7 @@ export default function EntryThread({ member, date, posts, showDate = false, onA
 
   if (empty && !isMine) {
     return (
-      <div className="card empty-slot">
+      <div className="card empty-slot member-theme" style={memberThemeStyle(member)}>
         <Avatar member={member} />
         <p>{member.displayName}님이 아직 이 날의 {DIARY_WORD}를 쓰지 않았어요.</p>
       </div>
@@ -46,7 +47,7 @@ export default function EntryThread({ member, date, posts, showDate = false, onA
   const showComposer = isMine && (empty || composing)
 
   return (
-    <section className="entry-card card thread" style={{ '--author-color': member.color || 'var(--accent)' }}>
+    <section className="entry-card card thread member-theme" style={memberThemeStyle(member)}>
       <header className="entry-card-header">
         <div className="entry-card-who">
           <Avatar member={member} />

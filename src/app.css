@@ -28,7 +28,6 @@
 .round-btn .app-icon { font-size: 16px; }
 .member-menu-trigger { overflow: hidden; }
 .member-menu-trigger.has-member { border: 2px solid var(--author-color); }
-.home-svg { width: 18px; height: 18px; }
 
 .member-menu { position: relative; }
 .member-menu-panel {
@@ -161,7 +160,8 @@
 
 .entry-mood-tags { display: flex; gap: 6px; flex-wrap: wrap; }
 .entry-mood-tag {
-  font-size: 13px; font-weight: 700; color: var(--accent); background: var(--accent-soft);
+  font-size: 13px; font-weight: 700; color: var(--author-color, var(--accent)); background: var(--bg-gradient);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--author-color, var(--accent)) 25%, transparent);
   padding: 4px 10px; border-radius: var(--radius-pill);
 }
 
@@ -379,7 +379,7 @@
   background: var(--bg-gradient); border: 1px solid var(--line);
   display: flex; align-items: center; justify-content: center; color: var(--ink-soft);
 }
-.home-nav-icon .home-svg { width: 16px; height: 16px; }
+.home-nav-icon .app-icon { font-size: 13px; }
 
 /* ---------- 모바일 ---------- */
 @media (max-width: 640px) {
@@ -470,3 +470,74 @@
 }
 .thread-add-btn:hover { background: var(--surface-sunken); color: var(--author-color); }
 .thread-composer:last-child { border-bottom: none; padding-bottom: 0; }
+
+/* ---------- 사람별 색 ----------
+   일기 칸(.member-theme)마다 그 사람의 '내 색상'·'배경색'으로 변수를 다시 계산해요.
+   (index.css의 :root 계산식과 같지만, 여기서 다시 적어야 그 칸 안에서만 그 사람 색으로 바뀌어요) */
+.member-theme {
+  --surface-gradient: linear-gradient(150deg, #ffffff 0%, color-mix(in srgb, var(--bg-solid) 75%, #ffffff) 100%);
+  --surface-sunken: color-mix(in srgb, var(--bg-solid), #000000 4%);
+  --line: color-mix(in srgb, var(--bg-solid), #000000 7%);
+}
+
+/* ---------- 설정: 먼저 보일 사람 ---------- */
+.settings-front-member { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.settings-front-member select {
+  padding: 9px 12px; border-radius: var(--radius-md); border: 1px solid var(--line);
+  background: var(--surface); font-size: 14px; color: var(--ink); font-family: inherit;
+}
+.settings-front-member small { font-weight: 400; font-size: 12px; }
+
+/* ---------- 모아보기: 달력 + 한 칸 너비 ---------- */
+/* 두 사람 일기가 나란히 있을 때 한 칸 정도의 너비(약 650px)로 맞춰 읽기 편하게 */
+.feed-view {
+  width: 100%; max-width: 650px; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.feed-view .feed-eyebrow, .feed-view .detail-heading { text-align: center; }
+.feed-view .detail-heading { margin-bottom: 0; }
+.feed-filter-row {
+  display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 6px;
+}
+.feed-filter-label { font-size: 16px; font-weight: 700; color: var(--ink); }
+.feed-list { margin-bottom: 0; }
+
+/* 검색 결과로 이동했을 때 잠깐 강조 */
+.entry-post { scroll-margin-top: 20px; border-radius: 10px; transition: box-shadow 0.4s ease, background 0.4s ease; }
+.entry-post.flash { box-shadow: 0 0 0 6px var(--accent-soft); background: var(--accent-soft); }
+
+/* ---------- 검색 창 ---------- */
+.search-overlay { align-items: flex-start; padding-top: min(12vh, 90px); }
+.search-modal { max-width: 560px; gap: 10px; }
+.search-input-row {
+  display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface);
+  padding: 4px 6px 4px 14px;
+}
+.search-input { flex: 1; min-width: 0; border: none; background: transparent; padding: 10px 0; font-size: 15px; outline: none; }
+.search-input::-webkit-search-cancel-button { display: none; }
+.search-status { margin: 0; font-size: 12px; color: var(--ink-soft); }
+.search-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.search-empty { font-size: 14px; color: var(--ink-soft); padding: 14px 4px; }
+.search-result {
+  width: 100%; text-align: left; display: flex; flex-direction: column; gap: 6px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 12px 14px;
+}
+.search-result:hover { border-color: var(--author-color); }
+.search-result-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.search-result-name { font-size: 13px; font-weight: 700; color: var(--author-color); }
+.search-result-date { font-size: 12px; color: var(--ink-soft); margin-left: auto; white-space: nowrap; }
+.search-result-snippet { margin: 0; font-size: 14px; line-height: 1.6; color: var(--ink); word-break: break-word; }
+.search-result-snippet mark { background: color-mix(in srgb, var(--author-color) 25%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+.search-result-where { display: flex; gap: 4px; }
+.search-where-chip {
+  font-size: 11px; font-weight: 700; color: var(--ink-soft);
+  background: var(--surface-sunken); padding: 2px 8px; border-radius: var(--radius-pill);
+}
+@media (max-width: 640px) {
+  .search-overlay { padding: 12px; }
+  .search-modal { max-height: calc(100vh - 24px); }
+  .search-result-head { flex-wrap: wrap; }
+  .search-result-date { margin-left: 0; width: 100%; }
+}

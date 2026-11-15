@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { todayStr } from '../lib/dataModel.js'
 
@@ -13,6 +13,13 @@ export default function Calendar({ index, selectedDate, onSelectDate }) {
   })
 
   const weeks = useMemo(() => buildMonthGrid(cursor.year, cursor.month), [cursor])
+
+  // 검색 등으로 다른 달의 날짜가 선택되면 달력도 그 달로 넘어가요.
+  useEffect(() => {
+    if (!selectedDate) return
+    const [y, m] = selectedDate.split('-').map(Number)
+    setCursor((prev) => (prev.year === y && prev.month === m - 1 ? prev : { year: y, month: m - 1 }))
+  }, [selectedDate])
 
   function shiftMonth(delta) {
     setCursor((prev) => {
