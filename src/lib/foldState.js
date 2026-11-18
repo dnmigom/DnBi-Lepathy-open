@@ -19,7 +19,7 @@ function write(key, value) {
   } catch (_) { /* 무시 */ }
 }
 
-/** [열림 여부, 토글 함수] */
+/** [열림 여부, 토글 함수, 강제로 열기/닫기(value)] */
 export function useFoldState(key, defaultOpen) {
   const [open, setOpen] = useState(() => read(key, defaultOpen))
   const toggle = useCallback(() => {
@@ -29,7 +29,11 @@ export function useFoldState(key, defaultOpen) {
       return next
     })
   }, [key])
-  return [open, toggle]
+  const setTo = useCallback((value) => {
+    write(key, value)
+    setOpen(value)
+  }, [key])
+  return [open, toggle, setTo]
 }
 
 /** 글을 지우면 그 글의 접기 기록도 같이 정리 */

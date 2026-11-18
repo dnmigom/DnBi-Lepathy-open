@@ -5,13 +5,15 @@ import { formatDateHeading } from '../lib/format.js'
 import { DIARY_WORD } from '../config.js'
 import Calendar from './Calendar.jsx'
 import EntryThread from './EntryThread.jsx'
+import MemberTabs from './MemberTabs.jsx'
 
 const PAGE_SIZE = 8
 
 // 한 사람의 글 모아보기.
 // 위쪽 달력에는 그 사람이 글을 쓴 날만 점으로 표시돼요.
 // selectedDate가 null이면 전체 글을 최신순으로, 날짜를 고르면 그 날짜의 글만 보여줘요.
-export default function UserFeedView({ memberId, selectedDate, onSelectDate }) {
+// onSelectMember: 달력 아래 사람 버튼을 누르면 그 사람의 글로 바꿔요.
+export default function UserFeedView({ memberId, selectedDate, onSelectDate, onSelectMember }) {
   const auth = useAuth()
   const [index, setIndex] = useState(null)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -72,10 +74,12 @@ export default function UserFeedView({ memberId, selectedDate, onSelectDate }) {
 
   return (
     <div className="feed-view">
-      <p className="feed-eyebrow">모아보기</p>
+      <p className="feed-eyebrow">텔레파시 모아보기</p>
       <h2 className="detail-heading">{member?.displayName}의 {DIARY_WORD}</h2>
 
       <Calendar index={memberIndex} selectedDate={selectedDate} onSelectDate={handleSelectDate} />
+
+      <MemberTabs value={memberId} onChange={(id) => { if (id !== memberId) onSelectMember(id) }} />
 
       <div className="feed-filter-row">
         {selectedDate ? (

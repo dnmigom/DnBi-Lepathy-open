@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useApp } from '../context/AppContext.jsx'
+import { makeSnapshot, targetKey } from '../lib/userState.js'
+import { commentDomId } from '../lib/format.js'
 import Avatar from './Avatar.jsx'
 import RemoteImage from './RemoteImage.jsx'
 import Lightbox from './Lightbox.jsx'
@@ -9,8 +12,9 @@ import Icon from './Icon.jsx'
 const LONG_PRESS_MS = 500
 const MOVE_CANCEL_PX = 24
 
-export default function CommentList({ comments, onEditComment, onDeleteComment }) {
+export default function CommentList({ comments, date, postAuthor, postId, onEditComment, onDeleteComment }) {
   const auth = useAuth()
+  const app = useApp()
   const [lightboxPath, setLightboxPath] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState('')
@@ -168,6 +172,7 @@ export default function CommentList({ comments, onEditComment, onDeleteComment }
           return (
             <li
               key={c.id}
+              id={commentDomId(c.id)}
               data-comment-id={c.id}
               className={`comment-item ${isMine ? 'mine' : ''} ${pressingId === c.id ? 'pressing' : ''}`}
               onContextMenu={(e) => handleContextMenu(e, c)}
@@ -177,6 +182,27 @@ export default function CommentList({ comments, onEditComment, onDeleteComment }
                 <div className="comment-meta">
                   <span className="comment-author" style={member?.color ? { color: member.color } : undefined}>{member?.displayName || c.author}</span>
                   <span className="comment-time">{formatTime(c.createdAt)}</span>
+                  {app && date && (() => {
+                    const snap = () => makeSnapshot({ type: 'comment', date, memberId: postAuthor, postId, comment: c })
+                    const on = app.isBookmarked(targetKey({ type: 'comment', date, memberId: postAuthor, postId, commentId: c.id }))
+                    return (
+                      <span className="comment-actions">
+                        <button
+                          type="button" className="comment-action-btn" onClick={() => app.addQuote(snap())}
+                          title="인용해서 새 글 쓰기" aria-label="댓글 인용"
+                        >
+                          <Icon name="quote" />
+                        </button>
+                        <button
+                          type="button" className={`comment-action-btn ${on ? 'is-on' : ''}`}
+                          onClick={() => app.toggleBookmark(snap())}
+                          title={on ? '북마크 해제' : '북마크'} aria-label="댓글 북마크" aria-pressed={on}
+                        >
+                          <Icon name={on ? 'bookmarked' : 'bookmark'} />
+                        </button>
+                      </span>
+                    )
+                  })()}
                 </div>
 
                 {isEditing ? (

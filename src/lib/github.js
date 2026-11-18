@@ -79,8 +79,9 @@ export function createClient({ owner, repo, token }) {
     },
 
     /** 텍스트(JSON) 파일 읽기. 없으면 null 반환 */
-    async getJson(path) {
-      const { status, data } = await request(`${base}/contents/${safeContentsPath(path)}`)
+    // fresh: true면 브라우저 캐시를 쓰지 않고 항상 최신 내용을 확인해요 (알림·북마크처럼 자주 바뀌는 파일용)
+    async getJson(path, { fresh = false } = {}) {
+      const { status, data } = await request(`${base}/contents/${safeContentsPath(path)}`, fresh ? { cache: 'no-cache' } : {})
       if (status === 404 || !data) return null
       if (Array.isArray(data)) throw new GitHubError(`${path}는 폴더예요.`)
       const text = base64ToUtf8(data.content)

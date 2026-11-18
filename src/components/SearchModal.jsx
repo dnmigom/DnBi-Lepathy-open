@@ -173,7 +173,7 @@ function cut(text, terms, radius = 45) {
   return `${start > 0 ? '…' : ''}${text.slice(start, end).replace(/\s+/g, ' ')}${end < text.length ? '…' : ''}`
 }
 
-function Highlight({ text, terms }) {
+export function Highlight({ text, terms }) {
   if (!terms.length) return text
   const escaped = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   const parts = text.split(new RegExp(`(${escaped.join('|')})`, 'gi'))

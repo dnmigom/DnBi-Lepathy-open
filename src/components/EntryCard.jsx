@@ -1,12 +1,15 @@
-import React, { useLayoutEffect, useRef, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useApp } from '../context/AppContext.jsx'
+import { notifyComment, unnotifyComment } from '../lib/inbox.js'
+import { makeSnapshot, targetKey } from '../lib/userState.js'
 import {
   deleteEntry, getChecklistFields, imagePath, makeCommentId, saveEntry, toggleReaction,
   withEditedComment, withNewComment, withoutComment,
 } from '../lib/dataModel.js'
 import { resizeImageFile } from '../lib/image.js'
 import { clearFoldState, useFoldState } from '../lib/foldState.js'
-import { formatClock, postDomId } from '../lib/format.js'
+import { commentDomId, formatClock, postDomId } from '../lib/format.js'
 import { DEFAULT_BODY_OPEN, DEFAULT_COMMENTS_OPEN, PREVIEW_HEIGHT_PX } from '../config.js'
 import RemoteImage from './RemoteImage.jsx'
 import Lightbox from './Lightbox.jsx'
@@ -15,6 +18,7 @@ import CommentList from './CommentList.jsx'
 import CommentForm from './CommentForm.jsx'
 import EntryEditor from './EntryEditor.jsx'
 import Icon from './Icon.jsx'
+import QuoteBox from './QuoteBox.jsx'
 
 // 스레드 안의 글 하나. 작성자 이름/아바타는 스레드(EntryThread) 머리에 한 번만 보여요.
 export default function EntryCard({
@@ -22,6 +26,7 @@ export default function EntryCard({
   showChecklist = true, isLastOfMember = true, onDeleted,
 }) {
   const auth = useAuth()
+  const app = useApp()
   const [entry, setEntry] = useState(initialEntry)
   const [sha, setSha] = useState(initialSha)
   const [editing, setEditing] = useState(false)
@@ -29,8 +34,35 @@ export default function EntryCard({
   const [lightboxPath, setLightboxPath] = useState(null)
 
   const foldKey = `${auth.session?.owner}/${auth.session?.repo}:${date}:${memberId}:${postId}`
-  const [bodyOpen, toggleBody] = useFoldState(`${foldKey}:body`, DEFAULT_BODY_OPEN)
-  const [commentsOpen, toggleComments] = useFoldState(`${foldKey}:comments`, DEFAULT_COMMENTS_OPEN)
+  const [bodyOpen, toggleBody, setBodyOpen] = useFoldState(`${foldKey}:body`, DEFAULT_BODY_OPEN)
+  const [commentsOpen, toggleComments, setCommentsOpen] = useFoldState(`${foldKey}:comments`, DEFAULT_COMMENTS_OPEN)
+
+  // 알림·검색·북마크·인용에서 이 글(또는 이 글의 댓글)로 이동해 왔을 때:
+  // 필요한 부분을 펼치고, 그 위치로 스크롤해서 잠깐 강조해요.
+  // (타이머는 이 글이 화면에서 사라질 때만 멈춰요. 이동 요청을 지우는 순간 멈추면 스크롤이 안 돼요)
+  const focus = app?.focus
+  const focusTimer = useRef(null)
+  useEffect(() => () => clearInterval(focusTimer.current), [])
+  useEffect(() => {
+    if (!focus || focus.date !== date || focus.memberId !== memberId || focus.postId !== postId) return
+    if (focus.commentId) setCommentsOpen(true)
+    else setBodyOpen(true)
+    app.clearFocus()
+    const id = focus.commentId ? commentDomId(focus.commentId) : postDomId(date, memberId, postId)
+    const block = focus.commentId ? 'center' : 'start'
+    let tries = 0
+    clearInterval(focusTimer.current)
+    focusTimer.current = setInterval(() => {
+      const el = document.getElementById(id)
+      if (el || ++tries > 30) clearInterval(focusTimer.current)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block })
+        el.classList.add('flash')
+        setTimeout(() => el.classList.remove('flash'), 1800)
+      }
+    }, 100)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus])
 
   // 본문이 미리보기 높이보다 길 때만 접기/펼치기 버튼을 보여줘요.
   const bodyInnerRef = useRef(null)
@@ -44,7 +76,7 @@ export default function EntryCard({
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [editing, entry.content, entry.images?.length])
+  }, [editing, entry.content, entry.images?.length, entry.quotes?.length])
 
   const author = auth.members.find((m) => m.id === memberId)
   const isMine = auth.currentMember?.id === memberId
@@ -85,7 +117,12 @@ export default function EntryCard({
       image: imgPath,
       createdAt: new Date().toISOString(),
     }
+    const before = entry.comments || []
     await persist(withNewComment(entry, comment))
+    // 글쓴이와 이 글에 댓글을 단 사람들에게 알림 (실패해도 댓글 자체에는 영향 없음)
+    notifyComment(auth.client, {
+      me: auth.currentMember.id, date, postAuthor: memberId, postId, comment, existingComments: before,
+    })
   }
 
   async function handleEditComment(commentId, text) {
@@ -94,6 +131,7 @@ export default function EntryCard({
 
   async function handleDeleteComment(commentId) {
     await persist(withoutComment(entry, commentId))
+    unnotifyComment(auth.client, { members: auth.members, me: auth.currentMember.id, commentId })
   }
 
   async function handleDelete() {
@@ -114,13 +152,30 @@ export default function EntryCard({
   const commentCount = entry.comments?.length || 0
   const collapsed = canFold && !bodyOpen
   const hasChecklistData = getChecklistFields(author).some((f) => entry.checklist?.[f.key])
+  const quotes = entry.quotes || []
+  const postSnapshot = () => makeSnapshot({ type: 'post', date, memberId, postId, entry })
+  const bookmarked = app?.isBookmarked(targetKey({ type: 'post', date, memberId, postId }))
 
   return (
     <article className="entry-post" id={postDomId(date, memberId, postId)}>
       <header className="entry-post-header">
         <span className="entry-post-time">{formatClock(entry.createdAt)}</span>
-        {isMine && !editing && (
+        {!editing && (
           <div className="entry-card-actions">
+            <button
+              className="btn btn-ghost btn-small icon-btn" onClick={() => app.addQuote(postSnapshot())}
+              title="인용해서 새 글 쓰기" aria-label="인용"
+            >
+              <Icon name="quote" />
+            </button>
+            <button
+              className={`btn btn-ghost btn-small icon-btn ${bookmarked ? 'is-on' : ''}`}
+              onClick={() => app.toggleBookmark(postSnapshot())}
+              title={bookmarked ? '북마크 해제' : '북마크'} aria-label="북마크" aria-pressed={!!bookmarked}
+            >
+              <Icon name={bookmarked ? 'bookmarked' : 'bookmark'} />
+            </button>
+            {isMine && <>
             <button
               className="btn btn-ghost btn-small icon-btn" onClick={() => setEditing(true)}
               title="수정" aria-label="수정"
@@ -133,6 +188,7 @@ export default function EntryCard({
             >
               <Icon name="delete" />
             </button>
+            </>}
           </div>
         )}
       </header>
@@ -178,8 +234,13 @@ export default function EntryCard({
             <div ref={bodyInnerRef}>
               {entry.content ? (
                 <p className="entry-content">{entry.content}</p>
-              ) : (
+              ) : quotes.length === 0 && (
                 <p className="entry-content empty">글 없이 기록만 남겼어요.</p>
+              )}
+              {quotes.length > 0 && (
+                <div className="quote-list">
+                  {quotes.map((q) => <QuoteBox key={q.key || targetKey(q)} quote={q} />)}
+                </div>
               )}
               {images.length > 0 && (
                 <div className="entry-image-grid">
@@ -221,7 +282,14 @@ export default function EntryCard({
 
       {commentsOpen && (
         <div className="comment-section">
-          <CommentList comments={entry.comments} onEditComment={handleEditComment} onDeleteComment={handleDeleteComment} />
+          <CommentList
+            comments={entry.comments}
+            date={date}
+            postAuthor={memberId}
+            postId={postId}
+            onEditComment={handleEditComment}
+            onDeleteComment={handleDeleteComment}
+          />
           <CommentForm onSubmit={handleAddComment} />
         </div>
       )}

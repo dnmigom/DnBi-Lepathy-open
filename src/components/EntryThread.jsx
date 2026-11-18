@@ -1,5 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useApp } from '../context/AppContext.jsx'
+import { todayStr } from '../lib/dataModel.js'
 import { DIARY_WORD, THREAD_NEWEST_FIRST } from '../config.js'
 import Avatar from './Avatar.jsx'
 import { memberThemeStyle } from '../lib/theme.js'
@@ -8,13 +10,24 @@ import EntryEditor from './EntryEditor.jsx'
 
 // 한 사람이 한 날짜에 쓴 글들을 스레드로 이어 붙여 보여줘요.
 // posts: [{ postId, json, sha }] (먼저 쓴 글이 앞)
-export default function EntryThread({ member, date, posts, showDate = false, onAdded, onRemoved }) {
+// allowCompose=false면 '이어서 쓰기'를 숨겨요 (태그 모아보기처럼 일부 글만 보여줄 때).
+// headPostId: 그날 첫 글 id (일부 글만 넘길 때 체크리스트를 올바른 글에 붙이기 위해)
+export default function EntryThread({
+  member, date, posts, showDate = false, allowCompose = true, headPostId: headOverride, onAdded, onRemoved,
+}) {
   const auth = useAuth()
-  const isMine = auth.currentMember?.id === member.id
+  const isMine = auth.currentMember?.id === member.id && allowCompose
   const [composing, setComposing] = useState(false)
+  const app = useApp()
+
+  // 인용 버튼을 누르면 오늘 날짜의 내 칸에 새 글 작성칸이 자동으로 열려요.
+  const quoteCount = app?.quoteDraft?.length || 0
+  useEffect(() => {
+    if (isMine && quoteCount > 0 && date === todayStr()) setComposing(true)
+  }, [isMine, quoteCount, date])
 
   // 체크리스트는 그날 첫 글에만 붙여요.
-  const headPostId = posts[0]?.postId
+  const headPostId = headOverride || posts[0]?.postId
   const ordered = THREAD_NEWEST_FIRST ? [...posts].reverse() : posts
   const empty = posts.length === 0
 

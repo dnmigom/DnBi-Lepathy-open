@@ -3,9 +3,11 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { SITE_TITLE } from '../config.js'
 import Avatar from './Avatar.jsx'
 import Icon from './Icon.jsx'
+import NotificationBell from './NotificationBell.jsx'
 
-// 화면 구성: 맨 위 가운데에 제목, 오른쪽 위에 [모아보기 선택 · 설정 · 로그아웃] 버튼.
-export default function Layout({ activeMemberId, onSelectMember, onOpenSettings, onOpenSearch, children }) {
+// 화면 구성: 맨 위 가운데에 제목(누르면 모두의 달력으로), 오른쪽 위에 [검색 · 알림 · 유저] 버튼.
+// 유저 버튼을 누르면 아래로 동그란 아이콘 메뉴가 펼쳐져요.
+export default function Layout({ view, onGoHome, onOpenView, onOpenSettings, onOpenSearch, children }) {
   const auth = useAuth()
 
   return (
@@ -19,20 +21,15 @@ export default function Layout({ activeMemberId, onSelectMember, onOpenSettings,
 
       <header className="topbar">
         <div className="topbar-spacer" aria-hidden="true" />
-        <button className="logo" onClick={() => onSelectMember(null)} title="캘린더로 돌아가기">
+        <button className="logo" onClick={onGoHome} title={`${SITE_TITLE} (모두의 달력)`}>
           {SITE_TITLE}
         </button>
         <div className="topbar-actions">
           <button className="round-btn" onClick={onOpenSearch} title="검색" aria-label="검색">
             <Icon name="search" />
           </button>
-          <MemberMenu activeMemberId={activeMemberId} onSelectMember={onSelectMember} />
-          <button className="round-btn" onClick={onOpenSettings} title="설정" aria-label="설정">
-            <Icon name="settings" />
-          </button>
-          <button className="round-btn" onClick={auth.logout} title="로그아웃" aria-label="로그아웃">
-            <Icon name="logout" />
-          </button>
+          <NotificationBell />
+          <UserMenu view={view} onOpenView={onOpenView} onOpenSettings={onOpenSettings} />
         </div>
       </header>
 
@@ -41,72 +38,64 @@ export default function Layout({ activeMemberId, onSelectMember, onOpenSettings,
   )
 }
 
-// 동그란 버튼을 누르면 '단비레파시'(모두의 일기 달력)와 멤버 목록이 아래로 펼쳐져요.
-function MemberMenu({ activeMemberId, onSelectMember }) {
+// 유저 버튼(내 프로필 사진) → 동그란 아이콘들이 세로로 펼쳐져요.
+// 메뉴 순서를 바꾸고 싶으면 아래 items 배열의 순서만 바꾸면 돼요.
+function UserMenu({ view, onOpenView, onOpenSettings }) {
   const auth = useAuth()
+  const me = auth.currentMember
   const [open, setOpen] = useState(false)
   const wrapRef = useRef(null)
-  const active = auth.members.find((m) => m.id === activeMemberId)
 
   useEffect(() => {
     if (!open) return undefined
-    function handleOutside(e) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
-    }
-    function handleKey(e) {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', handleOutside)
-    document.addEventListener('touchstart', handleOutside)
-    document.addEventListener('keydown', handleKey)
+    const outside = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false) }
+    const key = (e) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', outside)
+    document.addEventListener('touchstart', outside)
+    document.addEventListener('keydown', key)
     return () => {
-      document.removeEventListener('mousedown', handleOutside)
-      document.removeEventListener('touchstart', handleOutside)
-      document.removeEventListener('keydown', handleKey)
+      document.removeEventListener('mousedown', outside)
+      document.removeEventListener('touchstart', outside)
+      document.removeEventListener('keydown', key)
     }
   }, [open])
 
-  function pick(id) {
-    onSelectMember(id)
-    setOpen(false)
-  }
+  const items = [
+    { key: 'feed', icon: 'home', label: `${me?.displayName || ''}레파시 모아보기`, run: () => onOpenView('feed') },
+    { key: 'gallery', icon: 'gallery', label: '갤러리 모아보기', run: () => onOpenView('gallery') },
+    { key: 'bookmarks', icon: 'bookmarks', label: '북마크 모아보기', run: () => onOpenView('bookmarks') },
+    { key: 'tags', icon: 'tags', label: '태그 모아보기', run: () => onOpenView('tags') },
+    { key: 'settings', icon: 'settings', label: '설정', run: onOpenSettings },
+    { key: 'logout', icon: 'logout', label: '로그아웃', run: auth.logout },
+  ]
 
   return (
-    <div className="member-menu" ref={wrapRef}>
+    <div className="user-menu" ref={wrapRef}>
       <button
-        className={`round-btn member-menu-trigger ${active ? 'has-member' : ''}`}
-        style={active ? { '--author-color': active.color } : undefined}
+        className={`round-btn user-menu-trigger ${open ? 'open' : ''}`}
+        style={{ '--author-color': me?.color }}
         onClick={() => setOpen((v) => !v)}
-        title={active ? `${active.displayName}의 글 모아보는 중` : `${SITE_TITLE} (모두의 일기)`}
-        aria-label="모아볼 사람 고르기"
+        title={`${me?.displayName || ''} 메뉴`}
+        aria-label="유저 메뉴"
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        {active ? <Avatar member={active} size={34} /> : <Icon name="home" />}
+        <Avatar member={me} size={34} />
       </button>
 
       {open && (
-        <div className="member-menu-panel" role="menu">
-          <button
-            role="menuitem"
-            className={`member-nav-item ${activeMemberId === null ? 'active' : ''}`}
-            onClick={() => pick(null)}
-          >
-            <span className="home-nav-icon" aria-hidden="true"><Icon name="home" /></span>
-            <span className="member-nav-name">{SITE_TITLE}</span>
-          </button>
-          {auth.members.map((m) => (
+        <div className="user-menu-icons" role="menu">
+          {items.map((it, i) => (
             <button
+              key={it.key}
               role="menuitem"
-              key={m.id}
-              className={`member-nav-item ${activeMemberId === m.id ? 'active' : ''}`}
-              style={{ '--author-color': m.color }}
-              onClick={() => pick(m.id)}
-              title={`${m.displayName}의 글 모아보기`}
+              className={`round-btn user-menu-item ${view === it.key ? 'active' : ''}`}
+              style={{ animationDelay: `${i * 25}ms` }}
+              onClick={() => { setOpen(false); it.run() }}
+              title={it.label}
+              aria-label={it.label}
             >
-              <Avatar member={m} size={30} />
-              <span className="member-nav-name">{m.displayName}</span>
-              {m.id === auth.currentMember?.id && <span className="me-badge">나</span>}
+              <Icon name={it.icon} />
             </button>
           ))}
         </div>
