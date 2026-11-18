@@ -102,7 +102,10 @@ export default function NotificationBell() {
                     <b style={from?.color ? { color: from.color } : undefined}>{from?.displayName || it.from}</b>
                     {it.kind === 'my-post'
                       ? `님이 내 ${DIARY_WORD}에 댓글을 남겼어요`
-                      : `님이 ${owner?.displayName || it.memberId}님의 ${DIARY_WORD}에 댓글을 남겼어요`}
+                      : it.from === it.memberId
+                        // 글쓴이가 자기 글에 댓글을 단 경우 ('비비님이 비비님의 …'처럼 어색하지 않게)
+                        ? `님이 내가 댓글 단 ${DIARY_WORD}에 댓글을 남겼어요`
+                        : `님이 ${owner?.displayName || it.memberId}님의 ${DIARY_WORD}에 댓글을 남겼어요`}
                   </span>
                   {it.text && <span className="notif-item-text">{it.text}</span>}
                   <span className="notif-item-time">{timeAgo(it.createdAt)}</span>
