@@ -50,7 +50,7 @@ export default function CommentForm({ onSubmit }) {
       <div className="comment-form-row">
         <AutoGrowTextarea
           className="comment-form-textarea"
-          placeholder="댓글을 남겨보세요... (Shift+Enter로 줄바꿈)"
+          placeholder="댓글 작성하기"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onSubmitKey={handleSubmit}

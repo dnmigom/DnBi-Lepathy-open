@@ -65,7 +65,7 @@ export default function TagsView() {
 
   return (
     <div className="feed-view tags-view">
-      <p className="feed-eyebrow page-eyebrow">태그 모아보기</p>
+      <h2 className="detail-heading">태그 모아보기</h2>
 
       <MemberTabs value={memberId} onChange={setMemberId} />
 
@@ -75,7 +75,9 @@ export default function TagsView() {
       )}
 
       {tags.length > 0 && (
-        <div className="tag-cloud member-theme" style={memberThemeStyle(member)}>
+        // 태그가 많아져도 아래 일기까지 멀리 내려가지 않도록, 달력과 같은 높이의 상자 안에서 스크롤돼요.
+        <div className="card tag-box member-theme" style={memberThemeStyle(member)}>
+        <div className="tag-cloud">
           {tags.map(({ tag, count }) => (
             <button
               key={tag} type="button"
@@ -87,6 +89,7 @@ export default function TagsView() {
               <span className="tag-count">{count}</span>
             </button>
           ))}
+        </div>
         </div>
       )}
 

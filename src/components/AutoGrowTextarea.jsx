@@ -3,8 +3,18 @@ import React, { useLayoutEffect, useRef } from 'react'
 // 한 줄짜리 input처럼 보이지만, 내용이 길어지면 높이가 자동으로 늘어나는 textarea입니다.
 // 본문 입력칸처럼 오른쪽 아래 모서리를 끌어서 높이를 직접 조절할 수도 있어요.
 // (직접 키운 높이는 유지되고, 글이 그보다 길어지면 그때부터 다시 자동으로 늘어나요)
-// Enter로 등록/저장, Shift+Enter로 줄바꿈하도록 onSubmitKey를 통해 부모에서 처리합니다.
+// PC: Enter로 등록/저장, Shift+Enter로 줄바꿈 (onSubmitKey로 부모에서 처리)
+// 모바일: Enter는 그냥 줄바꿈, 등록은 전송 버튼으로
 const AUTO_MAX_HEIGHT = 240 // 자동으로 늘어날 때의 최대 높이(px). 직접 끌어서 키우는 건 제한 없음
+
+// 손가락으로 조작하는 기기(휴대폰·태블릿)인지: 마우스처럼 정밀한 포인터나 hover가 없으면 모바일로 봐요.
+function isTouchDevice() {
+  try {
+    return window.matchMedia('(hover: none) and (pointer: coarse)').matches
+  } catch (_) {
+    return false
+  }
+}
 
 export default function AutoGrowTextarea({
   value, onChange, onSubmitKey, placeholder, autoFocus, className, disabled,
@@ -41,6 +51,8 @@ export default function AutoGrowTextarea({
   }
 
   function handleKeyDown(e) {
+    // 모바일(터치 화면)에서는 Enter가 줄바꿈이고, 전송 버튼을 눌러야 보내져요.
+    if (isTouchDevice()) return
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
       onSubmitKey?.()

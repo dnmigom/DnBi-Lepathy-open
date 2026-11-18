@@ -64,7 +64,6 @@ export default function BookmarksView() {
 
   return (
     <div className="feed-view bookmarks-view">
-      <p className="feed-eyebrow">나만 보는</p>
       <h2 className="detail-heading">내 북마크</h2>
 
       <div className="search-input-row inline-search">

@@ -51,7 +51,7 @@ export default function GalleryView() {
 
   return (
     <div className="gallery-view">
-      <p className="feed-eyebrow page-eyebrow">갤러리 모아보기</p>
+      <h2 className="detail-heading">갤러리 모아보기</h2>
 
       <MemberTabs value={memberId} onChange={(id) => { setMemberId(id); setViewerIndex(null) }} />
 

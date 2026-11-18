@@ -74,8 +74,7 @@ export default function UserFeedView({ memberId, selectedDate, onSelectDate, onS
 
   return (
     <div className="feed-view">
-      <p className="feed-eyebrow">텔레파시 모아보기</p>
-      <h2 className="detail-heading">{member?.displayName}의 {DIARY_WORD}</h2>
+      <h2 className="detail-heading">{member?.displayName}레파시</h2>
 
       <Calendar index={memberIndex} selectedDate={selectedDate} onSelectDate={handleSelectDate} />
 

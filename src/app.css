@@ -668,7 +668,6 @@
   .member-menu-panel { position: fixed; top: 58px; left: 12px; right: 12px; width: auto; max-width: none; }
 }
 
-.page-eyebrow { font-size: 14px; margin-bottom: 2px; }
 
 /* ---------- 유저 메뉴: 동그란 아이콘만 세로로 펼쳐져요 ---------- */
 .user-menu { position: relative; }
@@ -700,3 +699,11 @@
   background: color-mix(in srgb, var(--author-color) 14%, #ffffff); color: var(--author-color);
 }
 .tag-chip.active .tag-count { background: rgba(255, 255, 255, 0.25); color: #ffffff; }
+
+/* ---------- 태그 상자: 달력과 같은 높이·같은 하얀 상자, 폭은 일기 폭 ---------- */
+.tag-box {
+  width: 100%; height: var(--tag-box-height, 343px);
+  background: var(--surface-gradient); overflow-y: auto; overscroll-behavior: contain;
+}
+.tag-box .tag-cloud { align-content: flex-start; }
+@media (max-width: 640px) { .tag-box { --tag-box-height: 333px; } }
