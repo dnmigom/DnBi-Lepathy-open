@@ -868,3 +868,19 @@ body.reaction-dragging, body.reaction-dragging * { cursor: grabbing !important; 
   max-height: calc(32px * 5 + 2px * 4 + 2px); overflow-y: auto; overscroll-behavior: contain;
   display: flex; flex-direction: column; margin-right: -4px; padding-right: 4px;
 }
+
+/* ---------- 일기 상자 여백 맞추기 ----------
+   오른쪽 위 아이콘 버튼은 버튼 안쪽 여백(8px) 때문에 아이콘이 상자 끝에서 26 + 8 = 34px 안쪽에 보여요.
+   그 오른쪽 여백을 기준으로, 왼쪽(이름·본문)과 본문 오른쪽 끝도 같은 34px로 맞춰요.
+   (버튼 줄은 -8px만큼 바깥으로 빼서 아이콘이 정확히 34px 자리에 오도록) */
+.post-box { padding-left: 34px; padding-right: 34px; }
+.post-box-actions { margin-right: -8px; }
+/* '타래 추가' 아래 여백 = 위쪽(점선 ~ 버튼) 여백 12px */
+.post-box:has(> .replies:last-child > .reply-add-btn:last-child) { padding-bottom: 13px; } /* 점선 1px + 12px */
+@media (max-width: 640px) {
+  /* 모바일: 아이콘이 26px 안쪽에 보이므로 좌우를 26px로 */
+  .post-box { padding-left: 26px; padding-right: 26px; }
+}
+
+/* 새 일기 작성 상자: 프로필(이름)과 태그 칸 사이에도 태그 칸~본문 칸 사이와 같은 간격(14px) */
+.post-box { display: flex; flex-direction: column; }
