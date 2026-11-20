@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
-import { addMember, addChecklistField, getChecklistFields, removeChecklistField, removeCustomReaction, removeMember, updateMember } from '../lib/dataModel.js'
+import { addMember, addChecklistField, getChecklistFields, removeChecklistField, removeMember, updateMember } from '../lib/dataModel.js'
 import { DIARY_WORD } from '../config.js'
 import { ColorPicker, BG_PALETTE } from './Setup.jsx'
 import AvatarPicker from './AvatarPicker.jsx'
 import Icon from './Icon.jsx'
+import ReactionLayoutEditor from './ReactionLayoutEditor.jsx'
 import Avatar from './Avatar.jsx'
 
 export default function SettingsModal({ onClose }) {
@@ -15,6 +16,16 @@ export default function SettingsModal({ onClose }) {
   // 모두의 일기에서 맨 앞(PC 왼쪽, 모바일 위)에 보일 사람. 사람마다 따로 저장돼요.
   const savedFrontId = auth.currentMember?.frontMemberId || ''
   const [frontMemberId, setFrontMemberId] = useState(savedFrontId)
+  // 글씨 크기(%) — 프로필에 저장돼서 다른 기기에서도 그대로예요. 고르는 즉시 미리 보여주고, 저장 안 하고 닫으면 되돌려요.
+  const savedFontScale = auth.currentMember?.fontScale || 100
+  const [fontScale, setFontScale] = useState(savedFontScale)
+  useEffect(() => {
+    document.documentElement.style.setProperty('--font-scale', String(fontScale / 100))
+  }, [fontScale])
+  useEffect(() => () => {
+    document.documentElement.style.setProperty('--font-scale', String((auth.currentMember?.fontScale || 100) / 100))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [savingProfile, setSavingProfile] = useState(false)
 
   const [tokenInput, setTokenInput] = useState('')
@@ -32,7 +43,6 @@ export default function SettingsModal({ onClose }) {
   const [removingId, setRemovingId] = useState(null)
   const [removeError, setRemoveError] = useState(null)
 
-  const [removingReactionId, setRemovingReactionId] = useState(null)
 
   const [addingField, setAddingField] = useState(false)
   const [newFieldLabel, setNewFieldLabel] = useState('')
@@ -45,11 +55,12 @@ export default function SettingsModal({ onClose }) {
     || avatar !== (auth.currentMember?.avatar || null)
     || bgColor !== (auth.currentMember?.bgColor || BG_PALETTE[0])
     || frontMemberId !== savedFrontId
+    || fontScale !== savedFontScale
 
   async function handleSaveProfile() {
     setSavingProfile(true)
     try {
-      const updated = await updateMember(auth.client, auth.config, auth.configSha, auth.currentMember.id, { color, bgColor, avatar, frontMemberId: frontMemberId || null })
+      const updated = await updateMember(auth.client, auth.config, auth.configSha, auth.currentMember.id, { color, bgColor, avatar, frontMemberId: frontMemberId || null, fontScale })
       auth.setConfig(updated)
       await auth.refreshConfig()
     } finally {
@@ -98,18 +109,6 @@ export default function SettingsModal({ onClose }) {
       setRemoveError(err.message || '삭제에 실패했어요.')
     } finally {
       setRemovingId(null)
-    }
-  }
-
-  async function handleRemoveCustomReaction(reaction) {
-    if (!window.confirm(`"${reaction.name}" 반응을 삭제할까요? 이미 남긴 반응 기록에서는 사라지지 않고 빈 이미지로 보일 수 있어요.`)) return
-    setRemovingReactionId(reaction.id)
-    try {
-      const updated = await removeCustomReaction(auth.client, auth.config, auth.configSha, reaction.id)
-      auth.setConfig(updated)
-      await auth.refreshConfig()
-    } finally {
-      setRemovingReactionId(null)
     }
   }
 
@@ -187,6 +186,22 @@ export default function SettingsModal({ onClose }) {
           />
           <ColorPicker value={color} onChange={setColor} />
           <ColorPicker value={bgColor} onChange={setBgColor} label="배경색" palette={BG_PALETTE} />
+          <label className="settings-front-member">
+            <span>글씨 크기</span>
+            <div className="font-scale-options" role="radiogroup">
+              {[90, 100, 110, 120, 130].map((v) => (
+                <button
+                  key={v} type="button" role="radio" aria-checked={fontScale === v}
+                  className={`font-scale-option ${fontScale === v ? 'active' : ''}`}
+                  style={{ fontSize: `${(14 * v) / 100}px` }}
+                  onClick={() => setFontScale(v)}
+                >
+                  {v === 100 ? '기본' : `${v}%`}
+                </button>
+              ))}
+            </div>
+            <small>홈페이지 전체 글씨 크기예요. 프로필 저장을 누르면 다른 기기에서도 그대로 적용돼요.</small>
+          </label>
           {auth.members.length > 1 && (
             <label className="settings-front-member">
               <span>모두의 {DIARY_WORD}에서 먼저 보일 사람</span>
@@ -247,32 +262,8 @@ export default function SettingsModal({ onClose }) {
         </section>
 
         <section className="modal-section">
-          <h3>커스텀 반응</h3>
-          {(auth.config?.customReactions || []).length === 0 ? (
-            <p className="settings-repo-info">아직 만든 반응이 없어요. 글 아래 "+ 반응 추가"에서 만들 수 있어요.</p>
-          ) : (
-            <ul className="settings-member-list">
-              {(auth.config?.customReactions || []).map((r) => (
-                <li key={r.id}>
-                  {r.emoji ? (
-                    <span className="settings-reaction-emoji">{r.emoji}</span>
-                  ) : (
-                    <img src={r.image} alt={r.name} className="settings-reaction-thumb" />
-                  )}
-                  <span className="settings-member-name">{r.name}</span>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-small btn-danger settings-member-remove icon-btn"
-                    title="삭제" aria-label="삭제"
-                    onClick={() => handleRemoveCustomReaction(r)}
-                    disabled={removingReactionId === r.id}
-                  >
-                    <Icon name="delete" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <h3>반응 그룹·순서</h3>
+          <ReactionLayoutEditor />
         </section>
 
         <section className="modal-section">

@@ -1,8 +1,9 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useApp } from '../context/AppContext.jsx'
-import { notifyComment, unnotifyComment } from '../lib/inbox.js'
+import { notifyComment, notifyReaction, unnotifyComment } from '../lib/inbox.js'
 import { makeSnapshot, targetKey } from '../lib/userState.js'
+import { changeQuoteRefs } from '../lib/quoteRefs.js'
 import {
   deleteEntry, getChecklistFields, imagePath, makeCommentId, saveEntry, toggleReaction,
   withEditedComment, withNewComment, withoutComment,
@@ -93,9 +94,14 @@ export default function EntryCard({
     setBusy(true)
     const prev = entry
     const optimistic = toggleReaction(entry, emoji, auth.currentMember.id)
+    const added = (optimistic.reactions?.[emoji] || []).includes(auth.currentMember.id)
     setEntry(optimistic)
     try {
       await persist(optimistic)
+      // 다른 사람 글에 반응을 남기면 글쓴이에게 알림 (취소하면 알림도 지워져요)
+      notifyReaction(auth.client, {
+        me: auth.currentMember.id, date, postAuthor: memberId, postId, reactionKey: emoji, added, postText: entry.content,
+      })
     } catch (e) {
       setEntry(prev) // 실패하면 되돌리기
     } finally {
@@ -141,6 +147,12 @@ export default function EntryCard({
     try {
       await deleteEntry(auth.client, date, memberId, postId, sha, { keepIndexed: !isLastOfMember })
       clearFoldState(foldKey)
+      // 이 글이 인용하던 것들의 인용 기록에서도 빼요
+      const qKeys = (entry.quotes || []).map((q) => q.key || targetKey(q))
+      if (qKeys.length) {
+        changeQuoteRefs(auth.client, { remove: qKeys, ref: { date, memberId, postId } })
+          .then((items) => items && app?.setQuoteRefs(items)).catch(() => {})
+      }
       onDeleted?.()
     } catch (e) {
       window.alert(e.message || '삭제에 실패했어요.')
@@ -154,7 +166,11 @@ export default function EntryCard({
   const hasChecklistData = getChecklistFields(author).some((f) => entry.checklist?.[f.key])
   const quotes = entry.quotes || []
   const postSnapshot = () => makeSnapshot({ type: 'post', date, memberId, postId, entry })
-  const bookmarked = app?.isBookmarked(targetKey({ type: 'post', date, memberId, postId }))
+  const myKey = targetKey({ type: 'post', date, memberId, postId })
+  const bookmarked = app?.isBookmarked(myKey)
+  // 내 글이면 인용된 횟수·북마크된 횟수를 아이콘 옆에 보여줘요
+  const quotedCount = isMine ? (app?.quoteRefsFor(myKey).length || 0) : 0
+  const bookmarkedCount = isMine ? (app?.bookmarkCountFor(myKey) || 0) : 0
 
   return (
     <article className="entry-post" id={postDomId(date, memberId, postId)}>
@@ -164,10 +180,18 @@ export default function EntryCard({
           <div className="entry-card-actions">
             <button
               className="btn btn-ghost btn-small icon-btn" onClick={() => app.addQuote(postSnapshot())}
-              title="인용해서 새 글 쓰기" aria-label="인용"
+              title="인용" aria-label="인용"
             >
               <Icon name="quote" />
             </button>
+            {quotedCount > 0 && (
+              <button
+                type="button" className="action-count clickable" onClick={() => app.openQuoteList(myKey)}
+                title="이 글을 인용한 글 보기" aria-label={`인용 ${quotedCount}회, 목록 보기`}
+              >
+                {quotedCount}
+              </button>
+            )}
             <button
               className={`btn btn-ghost btn-small icon-btn ${bookmarked ? 'is-on' : ''}`}
               onClick={() => app.toggleBookmark(postSnapshot())}
@@ -175,6 +199,9 @@ export default function EntryCard({
             >
               <Icon name={bookmarked ? 'bookmarked' : 'bookmark'} />
             </button>
+            {bookmarkedCount > 0 && (
+              <span className="action-count" title={`${bookmarkedCount}명이 북마크했어요`}>{bookmarkedCount}</span>
+            )}
             {isMine && <>
             <button
               className="btn btn-ghost btn-small icon-btn" onClick={() => setEditing(true)}
@@ -262,7 +289,7 @@ export default function EntryCard({
           </div>
           {canFold && (
             <button type="button" className="fold-toggle" onClick={toggleBody} aria-expanded={bodyOpen}>
-              {bodyOpen ? '접기 ▴' : `펼쳐서 전체 보기${images.length > 0 ? ` (사진 ${images.length}장)` : ''} ▾`}
+              {bodyOpen ? <>접기 <Icon name="sortUp" inherit className="caret-up" /></> : <>펼쳐서 전체 보기{images.length > 0 ? ` (사진 ${images.length}장)` : ''} <Icon name="sortDown" inherit className="caret-down" /></>}
             </button>
           )}
         </>
@@ -276,7 +303,7 @@ export default function EntryCard({
           onClick={toggleComments}
           aria-expanded={commentsOpen}
         >
-          {commentsOpen ? '댓글 접기 ▴' : commentCount > 0 ? `댓글 ${commentCount}개 ▾` : '댓글 달기 ▾'}
+          {commentsOpen ? <>댓글 접기 <Icon name="sortUp" inherit className="caret-up" /></> : <>{commentCount > 0 ? `댓글 ${commentCount}개` : '댓글 달기'} <Icon name="sortDown" inherit className="caret-down" /></>}
         </button>
       </div>
 

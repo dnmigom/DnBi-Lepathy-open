@@ -18,6 +18,13 @@ export const ICONS = {
   gallery: 'fa-regular fa-image',        // 유저 메뉴의 '갤러리 모아보기'
   quote: 'fa-solid fa-quote-right',      // 인용 (일기·댓글)
   tags: 'fa-solid fa-hashtag',           // 유저 메뉴의 '태그 모아보기'
+  scrollTop: 'fa-solid fa-angle-up',     // 오른쪽 아래: 맨 위로
+  scrollBottom: 'fa-solid fa-angle-down', // 오른쪽 아래: 맨 아래로
+  prev: 'fa-solid fa-angle-left',        // 갤러리 이전 사진, 달력 이전 달·이전 해
+  next: 'fa-solid fa-angle-right',       // 갤러리 다음 사진, 달력 다음 달·다음 해
+  plus: 'fa-solid fa-plus',              // 반응 추가
+  sortDown: 'fa-solid fa-sort-down',     // 펼치기·고르기 표시 (▾ 자리: 달력 제목, 펼쳐서 보기, 댓글, 타래)
+  sortUp: 'fa-solid fa-sort-up',         // 접기 표시 (▴ 자리: 접기, 댓글 접기, 타래 접기)
 }
 
 // 알림이 왔을 때 종 버튼 오른쪽 위에 뜨는 숫자 동그라미 색 (숫자는 흰색)

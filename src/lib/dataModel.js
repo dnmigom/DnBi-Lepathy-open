@@ -176,6 +176,13 @@ export async function addCustomReaction(client, currentConfig, currentSha, react
   return updated
 }
 
+/** 반응 선택창의 그룹·순서 저장: layout = [[key, ...], [key, ...]] */
+export async function saveReactionLayout(client, currentConfig, currentSha, layout) {
+  const updated = { ...currentConfig, reactionLayout: layout }
+  await client.putJson(CONFIG_PATH, updated, { sha: currentSha, message: '반응 그룹·순서 변경' })
+  return updated
+}
+
 export async function removeCustomReaction(client, currentConfig, currentSha, reactionId) {
   const updated = {
     ...currentConfig,

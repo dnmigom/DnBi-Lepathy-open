@@ -20,3 +20,5 @@ export const PREVIEW_HEIGHT_PX = 160
 // 한 번도 접거나 펼친 적 없는 글/댓글의 처음 상태. (한 번 누르면 그 뒤로는 마지막 상태를 기억해요)
 export const DEFAULT_BODY_OPEN = true
 export const DEFAULT_COMMENTS_OPEN = false
+// 일기 아래에 이어 단 '타래'(하위 일기)를 처음에 펼쳐 둘지 (한 번 접거나 펼치면 그 상태를 기억해요)
+export const DEFAULT_REPLIES_OPEN = true

@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { listPosts, orderMembersFor } from '../lib/dataModel.js'
 import EntryThread from './EntryThread.jsx'
 
-export default function DualEntryView({ date, onChanged }) {
+// onlyMemberId: 모바일에서 한 사람 것만 보여줄 때
+export default function DualEntryView({ date, onChanged, onlyMemberId = null }) {
   const auth = useAuth()
   const [posts, setPosts] = useState(undefined) // undefined = 불러오는 중, [] = 없음
   const [error, setError] = useState(null)
@@ -21,7 +22,7 @@ export default function DualEntryView({ date, onChanged }) {
   return (
     <div className="dual-view">
       {error && <p className="setup-error">{error}</p>}
-      {orderMembersFor(auth.members, auth.currentMember).map((m) => (
+      {orderMembersFor(auth.members, auth.currentMember).filter((m) => !onlyMemberId || m.id === onlyMemberId).map((m) => (
         <div className="dual-column" key={m.id}>
           {posts === undefined ? (
             <div className="card skeleton-card" />

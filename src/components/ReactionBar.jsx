@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { REACTIONS, addCustomReaction, makeCommentId, removeCustomReaction } from '../lib/dataModel.js'
+import { addCustomReaction, makeCommentId } from '../lib/dataModel.js'
+import { allReactionsFrom, reactionGroupsFrom } from '../lib/reactions.js'
 import { resizeStickerToDataUrl } from '../lib/image.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import Icon from './Icon.jsx'
 
 export default function ReactionBar({ entry, onToggle }) {
   const auth = useAuth()
@@ -11,7 +13,6 @@ export default function ReactionBar({ entry, onToggle }) {
   const [emojiDraft, setEmojiDraft] = useState(null) // { value, name } - 이모지로 만들기
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
-  const [removingCustomId, setRemovingCustomId] = useState(null)
   const wrapRef = useRef(null)
   const fileInputRef = useRef(null)
 
@@ -28,14 +29,9 @@ export default function ReactionBar({ entry, onToggle }) {
     return () => document.removeEventListener('mousedown', handleOutside)
   }, [])
 
-  const builtIn = REACTIONS.map((r) => ({ key: r.emoji, label: r.label, type: 'emoji', value: r.emoji }))
-  const custom = (auth.config?.customReactions || []).map((r) => ({
-    key: `custom:${r.id}`,
-    label: r.name,
-    type: r.emoji ? 'emoji' : 'image',
-    value: r.emoji || r.image,
-  }))
-  const allReactions = [...builtIn, ...custom]
+  const allReactions = allReactionsFrom(auth.config)
+  // 반응 선택창은 설정에서 정한 그룹·순서대로 보여요 (삭제는 설정에서만)
+  const groups = reactionGroupsFrom(auth.config)
 
   function namesFor(key) {
     const ids = entry.reactions?.[key] || []
@@ -97,25 +93,11 @@ export default function ReactionBar({ entry, onToggle }) {
     }
   }
 
-  async function handleDeleteCustom(e, reactionId, label) {
-    e.stopPropagation()
-    if (!window.confirm(`"${label}" 반응을 삭제할까요? 이미 남긴 반응 기록에서는 사라지지 않고 표시가 깨질 수 있어요.`)) return
-    setRemovingCustomId(reactionId)
-    try {
-      const updated = await removeCustomReaction(auth.client, auth.config, auth.configSha, reactionId)
-      auth.setConfig(updated)
-      await auth.refreshConfig()
-    } finally {
-      setRemovingCustomId(null)
-    }
-  }
-
   const showingForm = pending || emojiDraft
 
   return (
     <div className="reaction-bar">
       {activeReactions.map((r) => {
-        const count = entry.reactions?.[r.key]?.length || 0
         const mine = entry.reactions?.[r.key]?.includes(myId)
         return (
           <button
@@ -125,47 +107,36 @@ export default function ReactionBar({ entry, onToggle }) {
             title={`${r.label} · ${namesFor(r.key)}`}
           >
             {r.type === 'image' ? <img src={r.value} alt={r.label} className="reaction-img" /> : <span>{r.value}</span>}
-            <span className="reaction-count">{count}</span>
           </button>
         )
       })}
 
       <div className="reaction-add-wrap" ref={wrapRef}>
-        <button type="button" className="reaction-add-btn" onClick={() => setOpen((v) => !v)}>
-          + 반응 추가
+        <button
+          type="button" className="reaction-add-btn icon-only" onClick={() => setOpen((v) => !v)}
+          title="반응 추가" aria-label="반응 추가"
+        >
+          <Icon name="plus" />
         </button>
         {open && (
           <div className="reaction-picker">
             {!showingForm ? (
               <>
-                <div className="reaction-picker-grid">
-                  {allReactions.map((r) => {
-                    const reactionId = r.key.startsWith('custom:') ? r.key.slice('custom:'.length) : null
-                    return (
-                      <div key={r.key} className="reaction-picker-cell">
-                        <button
-                          type="button"
-                          className="reaction-picker-item"
-                          title={r.label}
-                          onClick={() => { onToggle(r.key); setOpen(false) }}
-                        >
-                          {r.type === 'image' ? <img src={r.value} alt={r.label} /> : r.value}
-                        </button>
-                        {reactionId && (
-                          <button
-                            type="button"
-                            className="reaction-picker-delete"
-                            title="이 반응 삭제"
-                            onClick={(e) => handleDeleteCustom(e, reactionId, r.label)}
-                            disabled={removingCustomId === reactionId}
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
+                {groups.map((group, gi) => (
+                  <div key={gi} className="reaction-picker-grid">
+                    {group.map((r) => (
+                      <button
+                        key={r.key}
+                        type="button"
+                        className="reaction-picker-item"
+                        title={r.label}
+                        onClick={() => { onToggle(r.key); setOpen(false) }}
+                      >
+                        {r.type === 'image' ? <img src={r.value} alt={r.label} /> : r.value}
+                      </button>
+                    ))}
+                  </div>
+                ))}
                 <label className="reaction-upload-btn">
                   + 이미지로 새 반응 만들기
                   <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFilePicked} hidden />

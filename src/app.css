@@ -12,7 +12,7 @@
 
 .logo {
   border: none; background: transparent; padding: 0 4px; text-align: center;
-  font-size: 22px; font-weight: 800; color: var(--ink); letter-spacing: -0.02em;
+  font-size: 22px; font-weight: 800; color: var(--accent); letter-spacing: -0.02em; /* 각자 고른 '내 색상' */
 }
 
 .topbar-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
@@ -102,8 +102,31 @@
   max-width: 1400px; margin: 0 auto;
 }
 .calendar { width: 100%; max-width: 380px; margin: 0 auto; background: var(--surface-gradient); }
-.calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.calendar-header h2 { font-size: 16px; margin: 0; }
+.calendar-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; margin-bottom: 12px; }
+.calendar-header-center { display: flex; align-items: center; gap: 2px; }
+.calendar-header-side.right { display: flex; justify-content: flex-end; }
+.calendar-title-btn {
+  border: none; background: transparent; font-size: 16px; font-weight: 800; color: var(--ink);
+  padding: 4px 8px; border-radius: 8px; white-space: nowrap;
+}
+.calendar-title-btn:hover, .calendar-title-btn.open { background: var(--surface-sunken); }
+.calendar-title-caret { font-size: 10px; color: var(--ink-soft); margin-left: 2px; }
+.calendar-today-btn {
+  border: 1px solid var(--line); background: var(--surface); color: var(--accent);
+  font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: var(--radius-pill);
+}
+.calendar-today-btn:hover { background: var(--surface-sunken); }
+/* 연·월 고르기 */
+.calendar-picker { display: flex; flex-direction: column; gap: 12px; padding: 6px 0 4px; }
+.calendar-picker-year { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 16px; font-weight: 800; }
+.calendar-picker-months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.calendar-picker-month {
+  border: 1px solid transparent; background: transparent; border-radius: var(--radius-md);
+  padding: 14px 0; font-size: 15px; font-weight: 700; color: var(--ink);
+}
+.calendar-picker-month:hover { background: var(--surface-sunken); }
+.calendar-picker-month.today { color: var(--accent); }
+.calendar-picker-month.current { background: var(--bg-gradient); border-color: rgba(0, 0, 0, 0.06); }
 .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 12px; color: var(--ink-soft); margin-bottom: 4px; }
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .calendar-cell {
@@ -707,3 +730,120 @@
 }
 .tag-box .tag-cloud { align-content: flex-start; }
 @media (max-width: 640px) { .tag-box { --tag-box-height: 333px; } }
+
+/* ---------- 오른쪽 아래: 맨 위/아래로 ---------- */
+.scroll-buttons {
+  position: fixed; right: max(14px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 40; display: flex; flex-direction: column; gap: 8px;
+}
+.scroll-btn { width: 38px; height: 38px; background: #ffffff; box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12); }
+.scroll-btn .app-icon { font-size: 16px; }
+/* 맨 아래 내용이 버튼에 가리지 않게 여유 */
+.main-area { padding-bottom: 110px; }
+
+/* 반응 추가: 아이콘만 */
+.reaction-add-btn.icon-only {
+  width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+}
+.reaction-add-btn.icon-only .app-icon { font-size: 13px; }
+.calendar-picker { min-height: 280px; justify-content: center; }
+
+/* ---------- 알림 필터 ---------- */
+.notif-filters { display: flex; gap: 4px; padding: 0 6px 8px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.notif-filter {
+  border: none; background: transparent; padding: 5px 10px; border-radius: var(--radius-pill);
+  font-size: 12px; font-weight: 700; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 4px;
+}
+.notif-filter:hover { background: var(--surface-sunken); }
+.notif-filter.active { background: var(--accent-soft); color: var(--accent); }
+.notif-filter-count {
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; font-size: 10px; line-height: 16px;
+  background: #D9534F; color: #fff; text-align: center;
+}
+.notif-reaction-img { width: 16px; height: 16px; vertical-align: -3px; }
+
+/* ---------- 내 글: 인용·북마크 횟수 ---------- */
+.entry-card-actions { display: flex; align-items: center; }
+.action-count {
+  font-size: 12px; font-weight: 800; color: var(--accent); margin: 0 6px 0 -4px; min-width: 10px;
+  border: none; background: transparent; padding: 2px 3px; border-radius: 6px;
+}
+.action-count.clickable { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.action-count.clickable:hover { background: var(--surface-sunken); }
+.quote-list-head { display: flex; align-items: center; gap: 8px; }
+.quote-list-head b { font-size: 15px; }
+.quote-list-head .btn { margin-left: auto; }
+/* 반응 선택창: 그룹마다 한 덩어리, 그룹 사이에 옅은 구분선 */
+.reaction-picker-grid + .reaction-picker-grid { border-top: 1px solid var(--line); padding-top: 6px; margin-top: 4px; }
+
+/* ---------- 설정: 반응 그룹·순서 ---------- */
+.reaction-layout { display: flex; flex-direction: column; gap: 10px; }
+.reaction-layout-groups { display: flex; flex-direction: column; gap: 8px; }
+.reaction-layout-group {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface);
+}
+.reaction-layout-items { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+.reaction-layout-item {
+  width: 38px; height: 38px; border-radius: 10px; border: 2px solid transparent; background: var(--surface-sunken);
+  font-size: 20px; display: inline-flex; align-items: center; justify-content: center; padding: 0;
+}
+.reaction-layout-item img { width: 26px; height: 26px; object-fit: contain; }
+.reaction-layout-item.selected { border-color: var(--accent); background: var(--accent-soft); }
+.reaction-layout-ungroup {
+  border: none; background: transparent; font-size: 12px; font-weight: 700; color: var(--ink-soft);
+  white-space: nowrap; padding: 4px 6px; border-radius: 6px;
+}
+.reaction-layout-ungroup:hover { background: var(--surface-sunken); }
+.reaction-layout-tools { display: flex; flex-direction: column; gap: 6px; }
+.reaction-layout-tools.disabled .reaction-layout-picked { color: var(--ink-soft); }
+.reaction-layout-picked { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+.reaction-layout-picked img { width: 20px; height: 20px; }
+.reaction-layout-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ---------- 글씨 크기 (설정) ---------- */
+/* 제목줄과 본문 화면을 함께 확대·축소해요. 기본 1 */
+.topbar, .main-area { zoom: var(--font-scale, 1); }
+.font-scale-options { display: flex; gap: 6px; flex-wrap: wrap; }
+.font-scale-option {
+  border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-pill);
+  padding: 6px 12px; font-weight: 700; color: var(--ink-soft); line-height: 1.2;
+}
+.font-scale-option.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+/* ---------- 일기마다 하얀 상자 + 타래 ---------- */
+.day-posts { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.day-posts > .thread-add-btn { background: rgba(255, 255, 255, 0.55); }
+.post-box { gap: 14px; }
+.post-box > .entry-card-header .thread-count { align-self: center; }
+.replies {
+  display: flex; flex-direction: column; gap: 12px;
+  border-top: 1px dashed var(--line); padding-top: 12px;
+}
+.replies-toggle {
+  align-self: flex-start; border: none; background: var(--bg-gradient); color: var(--author-color);
+  font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: var(--radius-pill);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--author-color) 20%, transparent);
+}
+.replies-toggle:hover { filter: brightness(0.98); }
+.reply-add-btn {
+  align-self: flex-start; border: 1px dashed var(--line); background: transparent;
+  border-radius: var(--radius-pill); padding: 6px 14px; font-size: 13px; font-weight: 700; color: var(--ink-soft);
+}
+.reply-add-btn:hover { background: var(--surface-sunken); color: var(--author-color); }
+.reply-composer { border: 1px solid var(--line); border-radius: var(--radius-md); padding: 14px; background: var(--surface-gradient); }
+@media (max-width: 640px) { .post-box { padding: 18px; } }
+/* 글자가 세로로 쪼개지지 않게 */
+.member-menu-panel.notif-panel { width: min(340px, calc(100vw - 28px)); max-width: none; }
+.notif-filter, .calendar-today-btn, .calendar-title-btn { white-space: nowrap; flex-shrink: 0; }
+@media (max-width: 640px) {
+  .member-menu-panel.notif-panel { width: auto; }
+}
+
+/* ▾ 대신 쓰는 fa-sort-down: 글자는 아래쪽에 치우쳐 있어서 살짝 올려 가운데에 맞춰요 */
+.app-icon.caret-down { font-size: 0.9em; position: relative; top: -0.18em; margin-left: 2px; }
+.calendar-title-caret.caret-down { color: var(--ink-soft) !important; font-size: 13px; }
+/* 달력 좌우 화살표 */
+.calendar-header-center .btn .app-icon, .calendar-picker-year .btn .app-icon { font-size: 14px; }
+/* ▴ 대신 쓰는 fa-sort-up: 글자가 위쪽에 치우쳐 있어서 살짝 내려 가운데에 맞춰요 */
+.app-icon.caret-up { font-size: 0.9em; position: relative; top: 0.22em; margin-left: 2px; }

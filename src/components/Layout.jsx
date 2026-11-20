@@ -4,6 +4,7 @@ import { SITE_TITLE } from '../config.js'
 import Avatar from './Avatar.jsx'
 import Icon from './Icon.jsx'
 import NotificationBell from './NotificationBell.jsx'
+import ScrollButtons from './ScrollButtons.jsx'
 
 // 화면 구성: 맨 위 가운데에 제목(누르면 모두의 달력으로), 오른쪽 위에 [검색 · 알림 · 유저] 버튼.
 // 유저 버튼을 누르면 아래로 동그란 아이콘 메뉴가 펼쳐져요.
@@ -34,6 +35,8 @@ export default function Layout({ view, onGoHome, onOpenView, onOpenSettings, onO
       </header>
 
       <main className="main-area">{children}</main>
+
+      <ScrollButtons />
     </div>
   )
 }
@@ -61,10 +64,10 @@ function UserMenu({ view, onOpenView, onOpenSettings }) {
   }, [open])
 
   const items = [
-    { key: 'feed', icon: 'home', label: `${me?.displayName || ''}레파시 모아보기`, run: () => onOpenView('feed') },
-    { key: 'gallery', icon: 'gallery', label: '갤러리 모아보기', run: () => onOpenView('gallery') },
-    { key: 'bookmarks', icon: 'bookmarks', label: '북마크 모아보기', run: () => onOpenView('bookmarks') },
-    { key: 'tags', icon: 'tags', label: '태그 모아보기', run: () => onOpenView('tags') },
+    { key: 'feed', icon: 'home', label: `${me?.displayName || ''}레파시`, run: () => onOpenView('feed') },
+    { key: 'gallery', icon: 'gallery', label: '갤러리', run: () => onOpenView('gallery') },
+    { key: 'bookmarks', icon: 'bookmarks', label: '북마크', run: () => onOpenView('bookmarks') },
+    { key: 'tags', icon: 'tags', label: '태그', run: () => onOpenView('tags') },
     { key: 'settings', icon: 'settings', label: '설정', run: onOpenSettings },
     { key: 'logout', icon: 'logout', label: '로그아웃', run: auth.logout },
   ]

@@ -6,6 +6,7 @@ import { formatDateHeading } from '../lib/format.js'
 import { memberThemeStyle } from '../lib/theme.js'
 import { DIARY_WORD } from '../config.js'
 import MemberTabs from './MemberTabs.jsx'
+import Icon from './Icon.jsx'
 import RemoteImage from './RemoteImage.jsx'
 
 // 사진 갤러리: 사람별로 그 사람이 일기·댓글에 첨부한 사진을 모아 보여줘요. (모두가 서로의 사진을 볼 수 있어요)
@@ -111,11 +112,11 @@ function GalleryViewer({ photo, index, count, onMove, onClose, onGo }) {
       <div className="lightbox-content gallery-viewer" onClick={(e) => e.stopPropagation()}>
         <RemoteImage path={photo.path} className="lightbox-image" />
         <div className="gallery-viewer-bar">
-          <button type="button" className="btn btn-small" onClick={() => onMove(-1)} disabled={index === 0} aria-label="이전 사진">‹</button>
+          <button type="button" className="btn btn-small" onClick={() => onMove(-1)} disabled={index === 0} aria-label="이전 사진"><Icon name="prev" /></button>
           <span className="gallery-viewer-info">
             {formatDateHeading(photo.date)}{photo.commentId ? ' · 댓글' : ''} · {index + 1}/{count}
           </span>
-          <button type="button" className="btn btn-small" onClick={() => onMove(1)} disabled={index === count - 1} aria-label="다음 사진">›</button>
+          <button type="button" className="btn btn-small" onClick={() => onMove(1)} disabled={index === count - 1} aria-label="다음 사진"><Icon name="next" /></button>
           <button type="button" className="btn btn-primary btn-small" onClick={() => onGo(photo)}>
             {photo.commentId ? '댓글로 이동' : '글로 이동'}
           </button>

@@ -9,8 +9,10 @@ import Lightbox from './Lightbox.jsx'
 import AutoGrowTextarea from './AutoGrowTextarea.jsx'
 import Icon from './Icon.jsx'
 
-const LONG_PRESS_MS = 500
-const MOVE_CANCEL_PX = 24
+// 꾹 누르기: 0.55초 이상, 손가락이 거의 움직이지 않았을 때만 (조금이라도 스크롤하면 취소)
+const LONG_PRESS_MS = 550
+const MOVE_CANCEL_PX = 8
+const PRESS_FEEDBACK_MS = 180 // 이 시간이 지나야 '누르는 중' 표시 (그냥 스치는 터치엔 반응 안 함)
 
 export default function CommentList({ comments, date, postAuthor, postId, onEditComment, onDeleteComment }) {
   const auth = useAuth()
@@ -67,20 +69,29 @@ export default function CommentList({ comments, date, postAuthor, postId, onEdit
       return commentsRef.current.find((c) => c.id === id) || null
     }
 
+    let feedbackTimer = null
     function clear() {
       if (longPressTimer.current) clearTimeout(longPressTimer.current)
+      if (feedbackTimer) clearTimeout(feedbackTimer)
       longPressTimer.current = null
+      feedbackTimer = null
       touchStart.current = null
       setPressingId(null)
     }
+    // 화면이 스크롤되면(관성 스크롤 포함) 꾹 누르기를 바로 취소
+    function onScroll() { if (touchStart.current) clear() }
 
     function onTouchStart(e) {
       const comment = findComment(e.target)
       if (!comment || auth.currentMember?.id !== comment.author) return
+      if (e.touches.length > 1) return // 두 손가락(확대 등)은 무시
+      if (e.target.closest?.('button, a, textarea, input')) return // 버튼 누를 때는 무시
       const t = e.touches[0]
-      touchStart.current = { x: t.clientX, y: t.clientY }
-      setPressingId(comment.id)
+      touchStart.current = { x: t.clientX, y: t.clientY, scrollY: window.scrollY }
+      feedbackTimer = setTimeout(() => { if (touchStart.current) setPressingId(comment.id) }, PRESS_FEEDBACK_MS)
       longPressTimer.current = setTimeout(() => {
+        // 그 사이 화면이 움직였으면 스크롤로 보고 취소
+        if (!touchStart.current || Math.abs(window.scrollY - touchStart.current.scrollY) > 2) { clear(); return }
         justLongPressed.current = true
         setMenu({ comment, x: t.clientX, y: t.clientY })
         touchStart.current = null
@@ -109,12 +120,14 @@ export default function CommentList({ comments, date, postAuthor, postId, onEdit
     el.addEventListener('touchmove', onTouchMove, { passive: true })
     el.addEventListener('touchend', onTouchEnd, { passive: false })
     el.addEventListener('touchcancel', clear, { passive: true })
+    window.addEventListener('scroll', onScroll, { passive: true, capture: true })
 
     return () => {
       el.removeEventListener('touchstart', onTouchStart)
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
       el.removeEventListener('touchcancel', clear)
+      window.removeEventListener('scroll', onScroll, { capture: true })
     }
   }, [auth.currentMember?.id])
 
@@ -189,7 +202,7 @@ export default function CommentList({ comments, date, postAuthor, postId, onEdit
                       <span className="comment-actions">
                         <button
                           type="button" className="comment-action-btn" onClick={() => app.addQuote(snap())}
-                          title="인용해서 새 글 쓰기" aria-label="댓글 인용"
+                          title="인용" aria-label="댓글 인용"
                         >
                           <Icon name="quote" />
                         </button>

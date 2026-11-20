@@ -4,6 +4,8 @@ import { resizeImageFile } from '../lib/image.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useApp } from '../context/AppContext.jsx'
 import { targetKey } from '../lib/userState.js'
+import { notifyQuotes } from '../lib/inbox.js'
+import { changeQuoteRefs } from '../lib/quoteRefs.js'
 import QuoteBox from './QuoteBox.jsx'
 import { DIARY_WORD } from '../config.js'
 import RemoteImage from './RemoteImage.jsx'
@@ -23,6 +25,8 @@ function hasAnyContent(content, checklist, moodTags, imageCount, showChecklist, 
 // (체크리스트는 하루에 한 번만 쓰면 되니까 그날 첫 글에만 보여줘요).
 export default function EntryEditor({
   date, memberId, postId = null, initialEntry, initialSha, showChecklist = true, onSaved, onCancel,
+  parentId = null, // 타래(하위 일기)로 쓸 때: 위 일기의 postId
+  placeholder,
 }) {
   const auth = useAuth()
   const app = useApp()
@@ -97,6 +101,7 @@ export default function EntryEditor({
         quotes: quotes.map((q) => ({ ...q, key: q.key || targetKey(q) })),
         checklist: { ...checklist },
       }
+      if (parentId && !entryData.parentId) entryData.parentId = parentId
       if (entryData.quotes.length === 0) delete entryData.quotes
       delete entryData.image // 예전 단일 이미지 필드는 정리
       delete entryData.mood // 예전 이모지 기분 필드는 정리
@@ -104,6 +109,20 @@ export default function EntryEditor({
       delete entryData.checklist.sleepHours // 수면 시간 기능은 삭제됨 (예전 기록도 저장할 때 정리)
       const targetPostId = postId || makePostId()
       const { entry, sha } = await saveEntry(auth.client, date, memberId, targetPostId, entryData, initialSha)
+      // 인용 기록·알림: 새로 들어간 인용은 기록하고 원래 쓴 사람에게 알림, 빠진 인용은 기록에서 지워요.
+      const before = new Set((base.quotes || []).map((q) => q.key || targetKey(q)))
+      const after = entry.quotes || []
+      const added = after.filter((q) => !before.has(q.key))
+      const removed = [...before].filter((k) => !after.some((q) => q.key === k))
+      if (added.length || removed.length) {
+        const ref = {
+          date, memberId, postId: targetPostId, from: memberId,
+          text: (entry.content || '').slice(0, 100), createdAt: entry.createdAt || new Date().toISOString(),
+        }
+        changeQuoteRefs(auth.client, { add: added.map((q) => q.key), remove: removed, ref })
+          .then((items) => items && app?.setQuoteRefs(items)).catch(() => {})
+        if (added.length) notifyQuotes(auth.client, { me: memberId, date, postId: targetPostId, content: entry.content, quotes: added })
+      }
       if (isNew) app?.clearQuotes()
       onSaved(entry, sha, targetPostId)
     } catch (err) {
@@ -123,7 +142,7 @@ export default function EntryEditor({
       <textarea
         className="entry-textarea"
         rows={6}
-        placeholder="오늘 하루는 어땠나요?"
+        placeholder={placeholder || "오늘 하루는 어땠나요?"}
         value={content}
         onChange={(e) => setContent(e.target.value)}
       />
