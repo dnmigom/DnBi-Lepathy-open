@@ -862,3 +862,9 @@ body.reaction-dragging, body.reaction-dragging * { cursor: grabbing !important; 
 .entry-post-footer .comment-toggle + .replies-toggle { margin-left: 4px; }
 /* 타래를 접었고 '타래 추가' 버튼도 없으면 빈 칸(점선)만 남지 않게 */
 .replies:empty { display: none; }
+
+/* 반응 추가 창: 반응 목록이 5줄(32px × 5 + 간격)을 넘으면 안에서 스크롤 */
+.reaction-picker-list {
+  max-height: calc(32px * 5 + 2px * 4 + 2px); overflow-y: auto; overscroll-behavior: contain;
+  display: flex; flex-direction: column; margin-right: -4px; padding-right: 4px;
+}

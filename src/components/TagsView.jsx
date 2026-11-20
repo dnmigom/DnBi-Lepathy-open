@@ -55,7 +55,7 @@ export default function TagsView() {
 
   return (
     <div className="feed-view tags-view">
-      <h2 className="detail-heading">태그</h2>
+      <h2 className="detail-heading">태그{posts === null ? '' : ` · ${tags.length}개`}</h2>
 
       <MemberTabs value={memberId} onChange={setMemberId} />
 

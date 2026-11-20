@@ -168,7 +168,7 @@ export default function ReactionLayoutEditor() {
   return (
     <div className="reaction-layout">
       <p className="settings-repo-info">
-        반응을 꾹 눌러서 원하는 자리로 끌어다 놓으세요. 비슷한 것끼리 묶어두면 '반응 추가' 창에서 그 묶음대로 보여요.
+        반응을 꾹 누르면 순서 변경이 가능합니다. 새 반응 그룹을 만들면 원하는 반응끼리 묶을 수 있습니다.
       </p>
 
       <div className="reaction-layout-groups">

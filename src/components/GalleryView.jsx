@@ -52,15 +52,16 @@ export default function GalleryView() {
 
   return (
     <div className="gallery-view">
-      <h2 className="detail-heading">갤러리</h2>
+      <h2 className="detail-heading">갤러리{loading ? '' : ` · ${photos.length}개`}</h2>
 
       <MemberTabs value={memberId} onChange={(id) => { setMemberId(id); setViewerIndex(null) }} />
 
-      <p className="search-status gallery-status">
-        {loading
-          ? `사진 모으는 중... ${progress.total ? `(${progress.done}/${progress.total}일)` : ''}`
-          : `사진 ${photos.length}장`}
-      </p>
+      {/* 사진 개수는 제목(갤러리 · n개)에 보여요. 모으는 동안만 진행 상황 표시 */}
+      {loading && (
+        <p className="search-status gallery-status">
+          사진 모으는 중... {progress.total ? `(${progress.done}/${progress.total}일)` : ''}
+        </p>
+      )}
 
       {!loading && photos.length === 0 && (
         <p className="feed-empty">{member?.displayName}님이 {DIARY_WORD}나 댓글에 첨부한 사진이 아직 없어요.</p>

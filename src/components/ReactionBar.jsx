@@ -122,6 +122,8 @@ export default function ReactionBar({ entry, onToggle }) {
           <div className="reaction-picker">
             {!showingForm ? (
               <>
+                {/* 반응 목록: 5줄이 넘으면 이 안에서만 스크롤돼요 */}
+                <div className="reaction-picker-list">
                 {groups.map((group, gi) => (
                   <div key={gi} className="reaction-picker-grid">
                     {group.map((r) => (
@@ -137,6 +139,7 @@ export default function ReactionBar({ entry, onToggle }) {
                     ))}
                   </div>
                 ))}
+                </div>
                 <label className="reaction-upload-btn">
                   + 이미지로 새 반응 만들기
                   <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFilePicked} hidden />

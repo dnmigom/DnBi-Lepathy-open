@@ -148,7 +148,7 @@ export default function SettingsModal({ onClose }) {
                 <option key={v} value={v}>{v}%{v === 100 ? ' (기본)' : ''}</option>
               ))}
             </select>
-            <small>홈페이지 전체 글씨 크기예요. 프로필 저장을 누르면 다른 기기에서도 그대로 적용돼요.</small>
+            <small>홈페이지 전체 글씨 크기를 변경합니다. 프로필 저장을 누르면 타 기기에 연동됩니다.</small>
           </label>
           {auth.members.length > 1 && (
             <label className="settings-front-member">
@@ -161,7 +161,7 @@ export default function SettingsModal({ onClose }) {
                   </option>
                 ))}
               </select>
-              <small>PC에서는 왼쪽, 모바일에서는 맨 위에 보여요. 나에게만 적용돼요.</small>
+              <small>설정 시 우측과 좌측에서 먼저 보이도록 변경되며 본인만 적용됩니다.</small>
             </label>
           )}
           <button className="btn btn-primary btn-small" onClick={handleSaveProfile} disabled={savingProfile || !profileChanged}>
@@ -216,7 +216,7 @@ export default function SettingsModal({ onClose }) {
 
 <section className="modal-section">
           <h3>토큰</h3>
-          <p className="settings-repo-info">토큰이 만료됐거나 새로 발급받았다면 여기서 바로 바꿀 수 있어요. 로그아웃할 필요 없어요.</p>
+          <p className="settings-repo-info">토큰이 만료됐거나 새로 발급 받았다면 다시 변경 가능합니다. 로그아웃 하지 않아도 됩니다.</p>
           <form className="setup-form" onSubmit={handleUpdateToken}>
             <label>
               <span>새 Personal Access Token</span>
