@@ -50,22 +50,12 @@ export default function TagsView() {
     return [...byDate].sort((a, b) => (a[0] < b[0] ? 1 : -1))
   }, [posts, selectedTag])
 
-  // 체크리스트는 그날 '첫 글'에만 붙으니, 태그로 걸러도 원래 첫 글을 알 수 있게
-  const headByDate = useMemo(() => {
-    const out = {}
-    for (const p of posts || []) {
-      const cur = out[p.date]
-      if (!cur || (p.json.createdAt || '') < (cur.json.createdAt || '')) out[p.date] = p
-    }
-    return Object.fromEntries(Object.entries(out).map(([d, p]) => [d, p.postId]))
-  }, [posts])
-
   const member = auth.members.find((m) => m.id === memberId)
   const matchCount = groups.reduce((n, [, list]) => n + list.length, 0)
 
   return (
     <div className="feed-view tags-view">
-      <h2 className="detail-heading">태그 모아보기</h2>
+      <h2 className="detail-heading">태그</h2>
 
       <MemberTabs value={memberId} onChange={setMemberId} />
 
@@ -108,7 +98,6 @@ export default function TagsView() {
                 posts={list}
                 showDate
                 allowCompose={false}
-                headPostId={headByDate[date]}
                 onRemoved={(postId) => setPosts((prev) => prev.filter((p) => !(p.date === date && p.postId === postId)))}
               />
             ))}

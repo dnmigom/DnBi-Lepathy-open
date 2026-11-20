@@ -9,6 +9,7 @@ import { memberThemeStyle } from '../lib/theme.js'
 import EntryCard from './EntryCard.jsx'
 import EntryEditor from './EntryEditor.jsx'
 import Icon from './Icon.jsx'
+import { formatClock } from '../lib/format.js'
 
 // 한 사람이 한 날짜에 쓴 일기들.
 //  - 일기 하나마다 하얀 상자가 하나씩 생겨요.
@@ -17,9 +18,8 @@ import Icon from './Icon.jsx'
 //    (위 일기의 댓글은 위 일기에 붙어 있어서 타래를 접어도 영향 없어요)
 // posts: [{ postId, json, sha }] (먼저 쓴 글이 앞)
 // allowCompose=false면 새 글·타래 쓰기를 숨겨요 (태그 모아보기처럼 일부 글만 보여줄 때).
-// headPostId: 그날 첫 글 id (일부 글만 넘길 때 체크리스트를 올바른 글에 붙이기 위해)
 export default function EntryThread({
-  member, date, posts, showDate = false, allowCompose = true, headPostId: headOverride, onAdded, onRemoved,
+  member, date, posts, showDate = false, allowCompose = true, onAdded, onRemoved,
 }) {
   const auth = useAuth()
   const isMine = auth.currentMember?.id === member.id && allowCompose
@@ -37,8 +37,6 @@ export default function EntryThread({
   const roots = posts.filter((p) => !p.json.parentId || !ids.has(p.json.parentId))
   const repliesOf = (rootId) => posts.filter((p) => p.json.parentId === rootId && p.postId !== rootId)
 
-  // 체크리스트는 그날 첫 일기에만 붙여요.
-  const headPostId = headOverride || roots[0]?.postId
   const orderedRoots = THREAD_NEWEST_FIRST ? [...roots].reverse() : roots
   const empty = posts.length === 0
 
@@ -69,7 +67,6 @@ export default function EntryThread({
             memberId={member.id}
             initialEntry={null}
             initialSha={undefined}
-            showChecklist={empty}
             onSaved={(entry, sha, postId) => {
               onAdded?.({ memberId: member.id, postId, json: entry, sha })
               setComposing(false)
@@ -88,7 +85,6 @@ export default function EntryThread({
           root={root}
           replies={repliesOf(root.postId)}
           canReply={isMine}
-          headPostId={headPostId}
           totalPosts={posts.length}
           onAdded={onAdded}
           onRemoved={onRemoved}
@@ -98,28 +94,31 @@ export default function EntryThread({
   )
 }
 
-function BoxHeader({ member, date, showDate, extra }) {
+// 상자 머리: 왼쪽에 이름(과 날짜·시각), 오른쪽 위에 그 일기의 인용·북마크·수정·삭제 버튼
+function BoxHeader({ member, date, showDate, time, actionsRef }) {
+  const sub = [showDate ? formatDate(date) : null, time || null].filter(Boolean).join(' · ')
   return (
     <header className="entry-card-header">
       <div className="entry-card-who">
         <Avatar member={member} />
         <div>
           <div className="entry-card-name">{member.displayName}</div>
-          {showDate && <div className="entry-card-date">{formatDate(date)}</div>}
+          {sub && <div className="entry-card-date">{sub}</div>}
         </div>
       </div>
-      {extra}
+      {actionsRef && <div className="post-box-actions" ref={actionsRef} />}
     </header>
   )
 }
 
 // 일기 하나 = 하얀 상자 하나. 아래에 타래가 한 묶음으로 붙어요.
-function PostBox({ member, date, showDate, root, replies, canReply, headPostId, totalPosts, onAdded, onRemoved }) {
+function PostBox({ member, date, showDate, root, replies, canReply, totalPosts, onAdded, onRemoved }) {
   const auth = useAuth()
   const [replying, setReplying] = useState(false)
   const foldKey = `${auth.session?.owner}/${auth.session?.repo}:${date}:${member.id}:${root.postId}:replies`
   const [open, toggle, setOpen] = useFoldState(foldKey, DEFAULT_REPLIES_OPEN)
   const app = useApp()
+  const [actionsSlot, setActionsSlot] = useState(null) // 상자 오른쪽 위 버튼 자리
 
   // 알림·검색 등으로 이 상자의 타래 글로 이동해 오면 타래를 펼쳐요.
   const focus = app?.focus
@@ -130,14 +129,23 @@ function PostBox({ member, date, showDate, root, replies, canReply, headPostId, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus])
 
+  // 타래 접기/펼치기 버튼: 맨 위 일기의 '댓글' 버튼 오른쪽에 붙어요
+  const repliesToggle = replies.length > 0 && (
+    <button type="button" className="replies-toggle" onClick={toggle} aria-expanded={open}>
+      {open ? <>타래 접기 <Icon name="sortUp" inherit className="caret-up" /></> : <>타래 {replies.length}개 펼치기 <Icon name="sortDown" inherit className="caret-down" /></>}
+    </button>
+  )
+
   const card = (p, isHead) => (
     <EntryCard
+      footerExtra={isHead ? repliesToggle : null}
+      actionsInBox={isHead}
+      actionsTarget={isHead ? actionsSlot : null}
       entry={p.json}
       sha={p.sha}
       date={date}
       memberId={member.id}
       postId={p.postId}
-      showChecklist={isHead && p.postId === headPostId}
       isLastOfMember={totalPosts === 1}
       onDeleted={() => onRemoved?.(p.postId)}
     />
@@ -147,18 +155,13 @@ function PostBox({ member, date, showDate, root, replies, canReply, headPostId, 
     <section className="card entry-card post-box">
       <BoxHeader
         member={member} date={date} showDate={showDate}
-        extra={replies.length > 0 && <span className="thread-count">타래 {replies.length}</span>}
+        time={formatClock(root.json.createdAt)} actionsRef={setActionsSlot}
       />
 
       {card(root, true)}
 
       {(replies.length > 0 || canReply) && (
         <div className="replies">
-          {replies.length > 0 && (
-            <button type="button" className="replies-toggle" onClick={toggle} aria-expanded={open}>
-              {open ? <>타래 접기 <Icon name="sortUp" inherit className="caret-up" /></> : <>타래 {replies.length}개 펼치기 <Icon name="sortDown" inherit className="caret-down" /></>}
-            </button>
-          )}
           {open && replies.length > 0 && (
             <ol className="thread-list">
               {replies.map((p) => (
@@ -168,7 +171,7 @@ function PostBox({ member, date, showDate, root, replies, canReply, headPostId, 
           )}
           {canReply && !replying && (
             <button type="button" className="reply-add-btn" onClick={() => { setReplying(true); setOpen(true) }}>
-              + 이어서 쓰기
+              <Icon name="plus" inherit /> 타래 추가
             </button>
           )}
           {canReply && replying && (
@@ -179,8 +182,7 @@ function PostBox({ member, date, showDate, root, replies, canReply, headPostId, 
                 parentId={root.postId}
                 initialEntry={null}
                 initialSha={undefined}
-                showChecklist={false}
-                placeholder="이 일기에 이어서 쓰기"
+                placeholder="이 텔레파시에 이어서 작성하기"
                 onSaved={(entry, sha, postId) => {
                   onAdded?.({ memberId: member.id, postId, json: entry, sha })
                   setReplying(false)

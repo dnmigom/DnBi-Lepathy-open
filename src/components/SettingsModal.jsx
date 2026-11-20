@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
-import { addMember, addChecklistField, getChecklistFields, removeChecklistField, removeMember, updateMember } from '../lib/dataModel.js'
+import { addMember, removeMember, updateMember } from '../lib/dataModel.js'
 import { DIARY_WORD } from '../config.js'
 import { ColorPicker, BG_PALETTE } from './Setup.jsx'
 import AvatarPicker from './AvatarPicker.jsx'
@@ -44,12 +44,6 @@ export default function SettingsModal({ onClose }) {
   const [removeError, setRemoveError] = useState(null)
 
 
-  const [addingField, setAddingField] = useState(false)
-  const [newFieldLabel, setNewFieldLabel] = useState('')
-  const [newFieldIcon, setNewFieldIcon] = useState('📝')
-  const [fieldError, setFieldError] = useState(null)
-  const [fieldBusy, setFieldBusy] = useState(false)
-  const [removingFieldKey, setRemovingFieldKey] = useState(null)
 
   const profileChanged = color !== auth.currentMember?.color
     || avatar !== (auth.currentMember?.avatar || null)
@@ -112,46 +106,6 @@ export default function SettingsModal({ onClose }) {
     }
   }
 
-  async function handleAddField(e) {
-    e.preventDefault()
-    setFieldBusy(true)
-    setFieldError(null)
-    try {
-      const label = newFieldLabel.trim()
-      if (!label) throw new Error('항목 이름을 입력해주세요.')
-      const base = label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9가-힣-]/g, '')
-      const key = base || `item-${Date.now()}`
-      const existing = getChecklistFields(auth.currentMember)
-      if (key === 'sleepHours' || existing.some((f) => f.key === key)) {
-        throw new Error('이미 있는 항목 이름이에요.')
-      }
-      const updated = await addChecklistField(auth.client, auth.config, auth.configSha, auth.currentMember.id, {
-        key, label, icon: newFieldIcon.trim() || '📝',
-      })
-      auth.setConfig(updated)
-      await auth.refreshConfig()
-      setNewFieldLabel('')
-      setNewFieldIcon('📝')
-      setAddingField(false)
-    } catch (err) {
-      setFieldError(err.message || '추가하지 못했어요.')
-    } finally {
-      setFieldBusy(false)
-    }
-  }
-
-  async function handleRemoveField(field) {
-    if (!window.confirm(`"${field.label}" 항목을 내 체크리스트에서 뺄까요? 이미 저장된 글의 기록은 그대로 남아있지만, 화면에는 더 이상 표시되지 않아요.`)) return
-    setRemovingFieldKey(field.key)
-    try {
-      const updated = await removeChecklistField(auth.client, auth.config, auth.configSha, auth.currentMember.id, field.key)
-      auth.setConfig(updated)
-      await auth.refreshConfig()
-    } finally {
-      setRemovingFieldKey(null)
-    }
-  }
-
   async function handleUpdateToken(e) {
     e.preventDefault()
     setTokenBusy(true)
@@ -188,18 +142,12 @@ export default function SettingsModal({ onClose }) {
           <ColorPicker value={bgColor} onChange={setBgColor} label="배경색" palette={BG_PALETTE} />
           <label className="settings-front-member">
             <span>글씨 크기</span>
-            <div className="font-scale-options" role="radiogroup">
-              {[90, 100, 110, 120, 130].map((v) => (
-                <button
-                  key={v} type="button" role="radio" aria-checked={fontScale === v}
-                  className={`font-scale-option ${fontScale === v ? 'active' : ''}`}
-                  style={{ fontSize: `${(14 * v) / 100}px` }}
-                  onClick={() => setFontScale(v)}
-                >
-                  {v === 100 ? '기본' : `${v}%`}
-                </button>
+            <select value={fontScale} onChange={(e) => setFontScale(Number(e.target.value))}>
+              {/* 10%부터 200%까지 10%씩 */}
+              {Array.from({ length: 20 }, (_, i) => (i + 1) * 10).map((v) => (
+                <option key={v} value={v}>{v}%{v === 100 ? ' (기본)' : ''}</option>
               ))}
-            </div>
+            </select>
             <small>홈페이지 전체 글씨 크기예요. 프로필 저장을 누르면 다른 기기에서도 그대로 적용돼요.</small>
           </label>
           {auth.members.length > 1 && (
@@ -262,60 +210,11 @@ export default function SettingsModal({ onClose }) {
         </section>
 
         <section className="modal-section">
-          <h3>반응 그룹·순서</h3>
+          <h3>반응 그룹 · 순서</h3>
           <ReactionLayoutEditor />
         </section>
 
-        <section className="modal-section">
-          <h3>내 체크리스트 항목</h3>
-          <p className="settings-repo-info">여기서 바꾸는 항목은 나에게만 적용돼요. 상대방은 자기 화면에서 따로 관리해요.</p>
-          <ul className="settings-member-list">
-            {getChecklistFields(auth.currentMember).map((f) => (
-              <li key={f.key}>
-                <span className="settings-field-icon">{f.icon}</span>
-                <span className="settings-member-name">{f.label}</span>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-small btn-danger settings-member-remove icon-btn"
-                  title="삭제" aria-label="삭제"
-                  onClick={() => handleRemoveField(f)}
-                  disabled={removingFieldKey === f.key}
-                >
-                  <Icon name="delete" />
-                </button>
-              </li>
-            ))}
-          </ul>
-          {!addingField ? (
-            <button className="btn btn-ghost btn-small" onClick={() => setAddingField(true)}>+ 항목 추가하기</button>
-          ) : (
-            <form className="setup-form" onSubmit={handleAddField}>
-              <div className="field-add-row">
-                <label className="field-icon-input">
-                  <span>아이콘</span>
-                  <input
-                    type="text" value={newFieldIcon}
-                    onChange={(e) => setNewFieldIcon(e.target.value)} maxLength={2}
-                  />
-                </label>
-                <label className="field-label-input">
-                  <span>이름</span>
-                  <input
-                    type="text" value={newFieldLabel} placeholder="예: 물 마시기"
-                    onChange={(e) => setNewFieldLabel(e.target.value)}
-                  />
-                </label>
-              </div>
-              {fieldError && <p className="setup-error">{fieldError}</p>}
-              <div className="entry-editor-actions">
-                <button type="button" className="btn btn-ghost" onClick={() => setAddingField(false)}>취소</button>
-                <button type="submit" className="btn btn-primary" disabled={fieldBusy}>{fieldBusy ? '추가 중...' : '추가'}</button>
-              </div>
-            </form>
-          )}
-        </section>
-
-        <section className="modal-section">
+<section className="modal-section">
           <h3>토큰</h3>
           <p className="settings-repo-info">토큰이 만료됐거나 새로 발급받았다면 여기서 바로 바꿀 수 있어요. 로그아웃할 필요 없어요.</p>
           <form className="setup-form" onSubmit={handleUpdateToken}>

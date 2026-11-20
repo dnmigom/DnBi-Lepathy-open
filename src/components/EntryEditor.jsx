@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { emptyEntry, getChecklistFields, imagePath, makePostId, saveEntry } from '../lib/dataModel.js'
+import { emptyEntry, imagePath, makePostId, saveEntry } from '../lib/dataModel.js'
 import { resizeImageFile } from '../lib/image.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useApp } from '../context/AppContext.jsx'
@@ -12,19 +12,16 @@ import RemoteImage from './RemoteImage.jsx'
 import HashtagInput from './HashtagInput.jsx'
 import Icon from './Icon.jsx'
 
-function hasAnyContent(content, checklist, moodTags, imageCount, showChecklist, quoteCount) {
-  const anyChecked = showChecklist && Object.values(checklist).some(Boolean)
+function hasAnyContent(content, moodTags, imageCount, quoteCount) {
   return !!content.trim()
-    || anyChecked
     || moodTags.length > 0
     || imageCount > 0
     || quoteCount > 0
 }
 
-// postId가 없으면 새 글을 만들어요. showChecklist=false면 체크리스트 칸을 숨겨요
-// (체크리스트는 하루에 한 번만 쓰면 되니까 그날 첫 글에만 보여줘요).
+// postId가 없으면 새 글을 만들어요.
 export default function EntryEditor({
-  date, memberId, postId = null, initialEntry, initialSha, showChecklist = true, onSaved, onCancel,
+  date, memberId, postId = null, initialEntry, initialSha, onSaved, onCancel,
   parentId = null, // 타래(하위 일기)로 쓸 때: 위 일기의 postId
   placeholder,
 }) {
@@ -32,14 +29,8 @@ export default function EntryEditor({
   const app = useApp()
   const isNew = !postId
   const base = initialEntry || emptyEntry(date, memberId)
-  const fields = getChecklistFields(auth.members.find((m) => m.id === memberId))
   const [content, setContent] = useState(base.content || '')
   const [moodTags, setMoodTags] = useState(base.moodTags || [])
-  const [checklist, setChecklist] = useState(() => {
-    const initial = {}
-    fields.forEach((f) => { initial[f.key] = !!base.checklist?.[f.key] })
-    return initial
-  })
   const [existingImages, setExistingImages] = useState(base.images || (base.image ? [base.image] : []))
   const [newImages, setNewImages] = useState([]) // { file, preview }
   const [saving, setSaving] = useState(false)
@@ -61,10 +52,6 @@ export default function EntryEditor({
   useEffect(() => {
     if (quoteCount > 0) formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [quoteCount])
-
-  function toggle(key) {
-    setChecklist((prev) => ({ ...prev, [key]: !prev[key] }))
-  }
 
   function handleFiles(e) {
     const files = Array.from(e.target.files || [])
@@ -99,14 +86,12 @@ export default function EntryEditor({
         moodTags,
         images: [...existingImages, ...uploadedPaths],
         quotes: quotes.map((q) => ({ ...q, key: q.key || targetKey(q) })),
-        checklist: { ...checklist },
       }
       if (parentId && !entryData.parentId) entryData.parentId = parentId
       if (entryData.quotes.length === 0) delete entryData.quotes
       delete entryData.image // 예전 단일 이미지 필드는 정리
       delete entryData.mood // 예전 이모지 기분 필드는 정리
-      if (!showChecklist) entryData.checklist = { ...(base.checklist || {}) }
-      delete entryData.checklist.sleepHours // 수면 시간 기능은 삭제됨 (예전 기록도 저장할 때 정리)
+      delete entryData.checklist // 체크리스트 기능은 삭제됨 (예전 기록도 저장할 때 정리)
       const targetPostId = postId || makePostId()
       const { entry, sha } = await saveEntry(auth.client, date, memberId, targetPostId, entryData, initialSha)
       // 인용 기록·알림: 새로 들어간 인용은 기록하고 원래 쓴 사람에게 알림, 빠진 인용은 기록에서 지워요.
@@ -135,14 +120,13 @@ export default function EntryEditor({
   return (
     <form className="entry-editor" onSubmit={handleSubmit} ref={formRef}>
       <div className="mood-row">
-        <span className="mood-row-label">오늘 기분</span>
-        <HashtagInput value={moodTags} onChange={setMoodTags} placeholder="#피곤 #설렘 처럼 적어보세요" />
+        <HashtagInput value={moodTags} onChange={setMoodTags} placeholder="#태그 작성하기" />
       </div>
 
       <textarea
         className="entry-textarea"
         rows={6}
-        placeholder={placeholder || "오늘 하루는 어땠나요?"}
+        placeholder={placeholder || ""}
         value={content}
         onChange={(e) => setContent(e.target.value)}
       />
@@ -178,19 +162,6 @@ export default function EntryEditor({
         )}
       </div>
 
-      {showChecklist && <div className="checklist-row">
-        {fields.map((f) => (
-          <button
-            type="button"
-            key={f.key}
-            className={`chip toggle ${checklist[f.key] ? 'active' : ''}`}
-            onClick={() => toggle(f.key)}
-          >
-            <span>{f.icon}</span> {f.label}
-          </button>
-        ))}
-      </div>}
-
       {error && <p className="setup-error">{error}</p>}
 
       <div className="entry-editor-actions">
@@ -200,7 +171,7 @@ export default function EntryEditor({
             onClick={() => { if (isNew) app?.clearQuotes(); onCancel() }}
           >취소</button>
         )}
-        <button type="submit" className="btn btn-primary" disabled={saving || !hasAnyContent(content, checklist, moodTags, existingImages.length + newImages.length, showChecklist, quotes.length)}>
+        <button type="submit" className="btn btn-primary" disabled={saving || !hasAnyContent(content, moodTags, existingImages.length + newImages.length, quotes.length)}>
           {saving ? '저장하는 중...' : '저장하기'}
         </button>
       </div>

@@ -127,12 +127,6 @@ textarea, input[type="text"], input[type="number"], input[type="password"] {
   border-color: var(--accent);
 }
 
-.chip.checklist-status {
-  background: var(--accent-soft);
-  color: var(--ink);
-  font-weight: 500;
-}
-
 .card {
   background: var(--surface);
   border-radius: var(--radius-lg);

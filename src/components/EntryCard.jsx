@@ -1,11 +1,12 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useApp } from '../context/AppContext.jsx'
 import { notifyComment, notifyReaction, unnotifyComment } from '../lib/inbox.js'
 import { makeSnapshot, targetKey } from '../lib/userState.js'
 import { changeQuoteRefs } from '../lib/quoteRefs.js'
 import {
-  deleteEntry, getChecklistFields, imagePath, makeCommentId, saveEntry, toggleReaction,
+  deleteEntry, imagePath, makeCommentId, saveEntry, toggleReaction,
   withEditedComment, withNewComment, withoutComment,
 } from '../lib/dataModel.js'
 import { resizeImageFile } from '../lib/image.js'
@@ -24,7 +25,10 @@ import QuoteBox from './QuoteBox.jsx'
 // 스레드 안의 글 하나. 작성자 이름/아바타는 스레드(EntryThread) 머리에 한 번만 보여요.
 export default function EntryCard({
   entry: initialEntry, sha: initialSha, date, memberId, postId,
-  showChecklist = true, isLastOfMember = true, onDeleted,
+  isLastOfMember = true, onDeleted,
+  actionsInBox = false, // true면 시각·버튼 줄을 그리지 않고, 버튼은 actionsTarget(상자 오른쪽 위)에 그려요
+  actionsTarget = null,
+  footerExtra = null, // 댓글 버튼 오른쪽에 붙일 것 (상자 맨 위 일기의 '타래 접기/펼치기' 버튼)
 }) {
   const auth = useAuth()
   const app = useApp()
@@ -163,7 +167,6 @@ export default function EntryCard({
   const images = entry.images || (entry.image ? [entry.image] : [])
   const commentCount = entry.comments?.length || 0
   const collapsed = canFold && !bodyOpen
-  const hasChecklistData = getChecklistFields(author).some((f) => entry.checklist?.[f.key])
   const quotes = entry.quotes || []
   const postSnapshot = () => makeSnapshot({ type: 'post', date, memberId, postId, entry })
   const myKey = targetKey({ type: 'post', date, memberId, postId })
@@ -172,11 +175,8 @@ export default function EntryCard({
   const quotedCount = isMine ? (app?.quoteRefsFor(myKey).length || 0) : 0
   const bookmarkedCount = isMine ? (app?.bookmarkCountFor(myKey) || 0) : 0
 
-  return (
-    <article className="entry-post" id={postDomId(date, memberId, postId)}>
-      <header className="entry-post-header">
-        <span className="entry-post-time">{formatClock(entry.createdAt)}</span>
-        {!editing && (
+  // 인용·북마크·수정·삭제 버튼. actionsTarget이 있으면(상자 맨 위 일기) 상자 오른쪽 위로 옮겨 그려요.
+  const actions = !editing && (
           <div className="entry-card-actions">
             <button
               className="btn btn-ghost btn-small icon-btn" onClick={() => app.addQuote(postSnapshot())}
@@ -217,8 +217,18 @@ export default function EntryCard({
             </button>
             </>}
           </div>
-        )}
-      </header>
+  )
+
+  return (
+    <article className="entry-post" id={postDomId(date, memberId, postId)}>
+      {actionsInBox ? (
+        actionsTarget && createPortal(actions, actionsTarget)
+      ) : (
+        <header className="entry-post-header">
+          <span className="entry-post-time">{formatClock(entry.createdAt)}</span>
+          {actions}
+        </header>
+      )}
 
       {moodTags.length > 0 && !editing && (
         <div className="entry-mood-tags">
@@ -235,24 +245,11 @@ export default function EntryCard({
           postId={postId}
           initialEntry={entry}
           initialSha={sha}
-          showChecklist={showChecklist || hasChecklistData}
           onSaved={(e, s) => { setEntry(e); setSha(s); setEditing(false) }}
           onCancel={() => setEditing(false)}
         />
       ) : (
         <>
-          {(showChecklist || hasChecklistData) && (
-            <div className="checklist-row readonly">
-              {getChecklistFields(author).map((f) => {
-                const on = !!entry.checklist?.[f.key]
-                return (
-                  <span key={f.key} className={`chip checklist-status ${on ? 'on' : 'off'}`}>
-                    {f.label}:{on ? 'O' : 'X'}
-                  </span>
-                )
-              })}
-            </div>
-          )}
 
           <div
             className={`entry-body ${collapsed ? 'collapsed' : ''}`}
@@ -305,6 +302,7 @@ export default function EntryCard({
         >
           {commentsOpen ? <>댓글 접기 <Icon name="sortUp" inherit className="caret-up" /></> : <>{commentCount > 0 ? `댓글 ${commentCount}개` : '댓글 달기'} <Icon name="sortDown" inherit className="caret-down" /></>}
         </button>
+        {footerExtra}
       </div>
 
       {commentsOpen && (

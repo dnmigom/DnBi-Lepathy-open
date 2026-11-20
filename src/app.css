@@ -188,8 +188,6 @@
   padding: 4px 10px; border-radius: var(--radius-pill);
 }
 
-.checklist-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.checklist-row.readonly .chip { pointer-events: none; }
 
 
 .entry-content { white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word; line-height: 1.7; font-size: 15.5px; margin: 0; }
@@ -205,8 +203,9 @@
 .entry-editor-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
 /* ---------- 오늘 기분 (해시태그 입력) ---------- */
-.mood-row { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
-.mood-row-label { font-size: 13px; font-weight: 700; color: var(--ink-soft); flex-shrink: 0; padding-top: 8px; }
+/* 태그 칸은 글 쓰는 칸과 같은 너비 */
+.mood-row { display: flex; width: 100%; }
+.mood-row .hashtag-input { flex: 1; width: 100%; }
 
 .hashtag-input {
   flex: 1; min-width: min(200px, 100%); display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
@@ -361,11 +360,6 @@
 .settings-repo-info { font-size: 13px; color: var(--ink-soft); margin: 0; }
 .settings-reaction-thumb { width: 24px; height: 24px; object-fit: cover; border-radius: 6px; }
 .settings-reaction-emoji { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
-.settings-field-icon { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; }
-.field-add-row { display: flex; gap: 10px; }
-.field-icon-input { width: 64px; flex-shrink: 0; }
-.field-icon-input input { width: 100%; text-align: center; font-size: 18px; padding: 8px; }
-.field-label-input { flex: 1; }
 .settings-token-success { font-size: 13px; color: var(--accent); margin: 0; font-weight: 600; }
 
 /* ---------- 사진 크게 보기 (라이트박스) ---------- */
@@ -776,30 +770,35 @@
 /* 반응 선택창: 그룹마다 한 덩어리, 그룹 사이에 옅은 구분선 */
 .reaction-picker-grid + .reaction-picker-grid { border-top: 1px solid var(--line); padding-top: 6px; margin-top: 4px; }
 
-/* ---------- 설정: 반응 그룹·순서 ---------- */
+/* ---------- 설정: 반응 그룹 · 순서 (꾹 눌러 끌어서 옮기기) ---------- */
 .reaction-layout { display: flex; flex-direction: column; gap: 10px; }
 .reaction-layout-groups { display: flex; flex-direction: column; gap: 8px; }
 .reaction-layout-group {
-  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 56px; padding: 8px 10px;
   border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface);
 }
-.reaction-layout-items { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+.reaction-layout-group.empty { border-style: dashed; justify-content: center; }
+.reaction-layout-empty { font-size: 12px; color: var(--ink-soft); pointer-events: none; }
 .reaction-layout-item {
-  width: 38px; height: 38px; border-radius: 10px; border: 2px solid transparent; background: var(--surface-sunken);
-  font-size: 20px; display: inline-flex; align-items: center; justify-content: center; padding: 0;
+  width: 40px; height: 40px; border-radius: 10px; border: 2px solid transparent; background: var(--surface-sunken);
+  font-size: 21px; display: inline-flex; align-items: center; justify-content: center;
+  cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
-.reaction-layout-item img { width: 26px; height: 26px; object-fit: contain; }
-.reaction-layout-item.selected { border-color: var(--accent); background: var(--accent-soft); }
-.reaction-layout-ungroup {
-  border: none; background: transparent; font-size: 12px; font-weight: 700; color: var(--ink-soft);
-  white-space: nowrap; padding: 4px 6px; border-radius: 6px;
+.reaction-layout-item img { width: 26px; height: 26px; object-fit: contain; pointer-events: none; }
+.reaction-layout-item.dragging {
+  border-color: var(--accent); background: var(--accent-soft); transform: scale(1.15);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15); cursor: grabbing; z-index: 1;
 }
-.reaction-layout-ungroup:hover { background: var(--surface-sunken); }
-.reaction-layout-tools { display: flex; flex-direction: column; gap: 6px; }
-.reaction-layout-tools.disabled .reaction-layout-picked { color: var(--ink-soft); }
-.reaction-layout-picked { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
-.reaction-layout-picked img { width: 20px; height: 20px; }
-.reaction-layout-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+body.reaction-dragging, body.reaction-dragging * { cursor: grabbing !important; user-select: none; }
+.reaction-layout-trash {
+  display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px;
+  border: 2px dashed color-mix(in srgb, #D9534F 45%, transparent); border-radius: var(--radius-md);
+  color: #D9534F; font-size: 13px; font-weight: 700; background: color-mix(in srgb, #D9534F 5%, transparent);
+}
+.reaction-layout-trash.over { background: color-mix(in srgb, #D9534F 16%, transparent); border-style: solid; }
+.reaction-layout-actions { align-items: center; }
+.reaction-layout-actions > .btn:first-child { margin-right: auto; }
 
 /* ---------- 글씨 크기 (설정) ---------- */
 /* 제목줄과 본문 화면을 함께 확대·축소해요. 기본 1 */
@@ -827,7 +826,7 @@
 }
 .replies-toggle:hover { filter: brightness(0.98); }
 .reply-add-btn {
-  align-self: flex-start; border: 1px dashed var(--line); background: transparent;
+  align-self: flex-end; display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--line); background: transparent;
   border-radius: var(--radius-pill); padding: 6px 14px; font-size: 13px; font-weight: 700; color: var(--ink-soft);
 }
 .reply-add-btn:hover { background: var(--surface-sunken); color: var(--author-color); }
@@ -847,3 +846,19 @@
 .calendar-header-center .btn .app-icon, .calendar-picker-year .btn .app-icon { font-size: 14px; }
 /* ▴ 대신 쓰는 fa-sort-up: 글자가 위쪽에 치우쳐 있어서 살짝 내려 가운데에 맞춰요 */
 .app-icon.caret-up { font-size: 0.9em; position: relative; top: 0.22em; margin-left: 2px; }
+
+/* 상자 오른쪽 위: 맨 위 일기의 버튼들 */
+.post-box > .entry-card-header { align-items: flex-start; }
+.post-box-actions { display: flex; align-items: center; margin-top: 2px; }
+.post-box-actions:empty { display: none; }
+.reply-add-btn .app-icon { font-size: 11px; }
+/* 태그 칸 안의 입력란에 테두리가 하나 더 생기던 것 정리 (전체 input 스타일보다 우선) */
+.hashtag-input .hashtag-field { border: none; box-shadow: none; background: transparent; padding: 6px 4px; border-radius: 0; }
+.mood-row .hashtag-input { padding: 6px 10px; border-radius: var(--radius-md); }
+.hashtag-input .hashtag-field:focus, .hashtag-input .hashtag-field:focus-visible { outline: none; }
+.hashtag-input:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+/* '타래 접기/펼치기'는 맨 위 일기의 댓글 버튼 바로 오른쪽 */
+.entry-post-footer .replies-toggle { align-self: center; flex-shrink: 0; }
+.entry-post-footer .comment-toggle + .replies-toggle { margin-left: 4px; }
+/* 타래를 접었고 '타래 추가' 버튼도 없으면 빈 칸(점선)만 남지 않게 */
+.replies:empty { display: none; }

@@ -1,6 +1,5 @@
 // 저장소 안의 파일 구조:
-//   config.json                  -> { members: [{ id, displayName, color, ..., checklistFields }], customReactions: [...] }
-//                                    (체크리스트 항목은 멤버마다 따로 관리됩니다)
+//   config.json                  -> { members: [{ id, displayName, color, ... }], customReactions: [...] }
 //   index.json                   -> { "2026-09-13": ["minji", "yohan"], ... }  (날짜별 작성자 인덱스, 조회 속도용)
 //   entries/YYYY-MM-DD/{id}.json          -> (예전 방식) 한 사람의 그 날짜 첫 일기. 그대로 읽혀요. postId = 'main'
 //   entries/YYYY-MM-DD/{id}.{postId}.json -> (새 방식) 한 사람이 그 날짜에 쓴 일기 여러 개. 스레드로 이어 붙여 보여줘요.
@@ -17,17 +16,6 @@ export const REACTIONS = [
   { emoji: '😆', label: '웃김' },
   { emoji: '😢', label: '토닥토닥' },
 ]
-
-export const DEFAULT_CHECKLIST_FIELDS = [
-  { key: 'medication', label: '약', icon: '💊' },
-  { key: 'outing', label: '외출/운동', icon: '🚶' },
-  { key: 'cleaning', label: '청소', icon: '🧹' },
-  { key: 'delivery', label: '배달 주문', icon: '🛵' },
-]
-
-export function getChecklistFields(member) {
-  return member?.checklistFields || DEFAULT_CHECKLIST_FIELDS
-}
 
 export function todayStr(d = new Date()) {
   const y = d.getFullYear()
@@ -77,7 +65,6 @@ export function emptyEntry(date, memberId, postId) {
     moodTags: [],
     content: '',
     images: [],
-    checklist: {},
     reactions: {},
     comments: [],
     createdAt: new Date().toISOString(),
@@ -104,12 +91,6 @@ export function sanitizeConfig(raw) {
       color: safeColor(m.color, '#ff8fb1'),
       bgColor: m.bgColor ? safeColor(m.bgColor, null) : m.bgColor,
       avatar: m.avatar ? safeImg(m.avatar) : m.avatar,
-      checklistFields: Array.isArray(m.checklistFields)
-        ? m.checklistFields
-            .filter((f) => f && typeof f.key === 'string' && /^[A-Za-z0-9_-]{1,60}$/.test(f.key))
-            .map((f) => ({ ...f, label: safeText(f.label, 20), icon: safeText(f.icon, 16) }))
-            .slice(0, 30)
-        : m.checklistFields,
     }))
   const out = { ...cfg, members }
   if (Array.isArray(cfg.customReactions)) {
@@ -190,18 +171,6 @@ export async function removeCustomReaction(client, currentConfig, currentSha, re
   }
   await client.putJson(CONFIG_PATH, updated, { sha: currentSha, message: '커스텀 반응 삭제' })
   return updated
-}
-
-export async function addChecklistField(client, currentConfig, currentSha, memberId, field) {
-  const member = currentConfig.members.find((m) => m.id === memberId)
-  const current = getChecklistFields(member)
-  return updateMember(client, currentConfig, currentSha, memberId, { checklistFields: [...current, field] })
-}
-
-export async function removeChecklistField(client, currentConfig, currentSha, memberId, key) {
-  const member = currentConfig.members.find((m) => m.id === memberId)
-  const current = getChecklistFields(member)
-  return updateMember(client, currentConfig, currentSha, memberId, { checklistFields: current.filter((f) => f.key !== key) })
 }
 
 export async function loadIndex(client) {
