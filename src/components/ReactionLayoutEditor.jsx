@@ -1,81 +1,162 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { removeCustomReaction, saveReactionLayout } from '../lib/dataModel.js'
 import { reactionGroupsFrom } from '../lib/reactions.js'
 import Icon from './Icon.jsx'
 
-// 설정: 반응 그룹·순서 편집 + 커스텀 반응 삭제
-// 이모티콘을 눌러 고른 뒤 아래 버튼으로 옮기거나, 따로 빼서 새 그룹을 만들거나, 그룹을 풀 수 있어요.
-// 저장하면 모두의 '반응 추가' 창에 이 그룹·순서대로 보여요.
+// 설정: 반응 그룹 · 순서
+// 반응을 꾹 눌러서(마우스는 눌러서 끌기) 원하는 자리로 옮겨요. 다른 그룹으로도 바로 옮길 수 있어요.
+// '새 반응 그룹'으로 빈 그룹을 만들고 그 안으로 끌어다 놓으면 돼요. 비어 있는 그룹은 저장할 때 사라져요.
+// 직접 추가한 반응은 아래 휴지통으로 끌어다 놓으면 삭제돼요.
+const LONG_PRESS_MS = 280 // 터치: 이만큼 꾹 누르면 옮기기 시작 (그 전에 움직이면 그냥 스크롤)
+const MOUSE_START_PX = 4 // 마우스: 이만큼 움직이면 옮기기 시작
+const TOUCH_CANCEL_PX = 8
+
 export default function ReactionLayoutEditor() {
   const auth = useAuth()
   const initial = useMemo(() => reactionGroupsFrom(auth.config), [auth.config])
-  const [groups, setGroups] = useState(initial) // [[reaction, ...], ...]
-  const [selected, setSelected] = useState(null) // reaction key
+  const [groups, setGroups] = useState(initial) // [[reaction, ...], ...]  (빈 그룹도 편집 중엔 유지)
+  const [dragKey, setDragKey] = useState(null)
+  const [overTrash, setOverTrash] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
+  const groupsRef = useRef(groups)
+  groupsRef.current = groups
+  const drag = useRef(null) // { key, x, y, active, timer, pointerType }
 
-  const pos = (() => {
-    for (let g = 0; g < groups.length; g++) {
-      const i = groups[g].findIndex((r) => r.key === selected)
-      if (i !== -1) return { g, i }
+  const keysOf = (gs) => gs.filter((g) => g.length).map((g) => g.map((r) => r.key))
+  const dirty = JSON.stringify(keysOf(groups)) !== JSON.stringify(keysOf(initial))
+  const dragItem = groups.flat().find((r) => r.key === dragKey)
+
+  // 손가락/마우스 아래에 있는 자리로 반응을 옮겨요 (옮기는 동안 바로바로 순서가 바뀌어 보여요)
+  function moveTo(x, y) {
+    const el = document.elementFromPoint(x, y)
+    if (!el) return
+    const trash = !!el.closest('[data-reaction-trash]')
+    setOverTrash(trash)
+    if (trash) return
+    const groupEl = el.closest('[data-reaction-group]')
+    if (!groupEl) return
+    const gi = Number(groupEl.dataset.reactionGroup)
+    const itemEl = el.closest('[data-reaction-key]')
+    const key = drag.current.key
+    if (itemEl && itemEl.dataset.reactionKey === key) return
+    setGroups((prev) => {
+      const gs = prev.map((g) => g.filter((r) => r.key !== key))
+      const moving = prev.flat().find((r) => r.key === key)
+      if (!moving || !gs[gi]) return prev
+      let idx = gs[gi].length
+      if (itemEl) {
+        const rect = itemEl.getBoundingClientRect()
+        const at = gs[gi].findIndex((r) => r.key === itemEl.dataset.reactionKey)
+        idx = at + (x > rect.left + rect.width / 2 ? 1 : 0)
+      }
+      gs[gi].splice(idx, 0, moving)
+      // 바뀐 게 없으면 그대로 (불필요한 다시 그리기 방지)
+      return JSON.stringify(gs.map((g) => g.map((r) => r.key))) === JSON.stringify(prev.map((g) => g.map((r) => r.key))) ? prev : gs
+    })
+  }
+
+  function startDrag() {
+    drag.current.active = true
+    setDragKey(drag.current.key)
+    setMessage(null)
+    document.body.classList.add('reaction-dragging')
+    if (drag.current.pointerType === 'touch') navigator.vibrate?.(15)
+  }
+
+  async function endDrag() {
+    const d = drag.current
+    drag.current = null
+    document.body.classList.remove('reaction-dragging')
+    if (d?.timer) clearTimeout(d.timer)
+    const wasTrash = overTrash
+    setDragKey(null)
+    setOverTrash(false)
+    if (d?.active && wasTrash) await removeReaction(d.key)
+  }
+
+  // 전역 이벤트: 끄는 동안 손가락/마우스를 따라가요
+  useEffect(() => {
+    function onMouseMove(e) {
+      const d = drag.current
+      if (!d || d.pointerType !== 'mouse') return
+      if (!d.active && Math.hypot(e.clientX - d.x, e.clientY - d.y) > MOUSE_START_PX) startDrag()
+      if (drag.current?.active) moveTo(e.clientX, e.clientY)
     }
-    return null
-  })()
-  const dirty = JSON.stringify(groups.map((g) => g.map((r) => r.key))) !== JSON.stringify(initial.map((g) => g.map((r) => r.key)))
+    function onTouchMove(e) {
+      const d = drag.current
+      if (!d || d.pointerType !== 'touch') return
+      const t = e.touches[0]
+      if (!d.active) {
+        // 꾹 누르기 전에 움직이면 스크롤로 보고 취소
+        if (Math.hypot(t.clientX - d.x, t.clientY - d.y) > TOUCH_CANCEL_PX) { clearTimeout(d.timer); drag.current = null }
+        return
+      }
+      e.preventDefault() // 옮기는 중에는 화면이 스크롤되지 않게
+      moveTo(t.clientX, t.clientY)
+    }
+    function onUp() { if (drag.current) endDrag() }
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onUp)
+    window.addEventListener('touchmove', onTouchMove, { passive: false })
+    window.addEventListener('touchend', onUp)
+    window.addEventListener('touchcancel', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onUp)
+      window.removeEventListener('touchcancel', onUp)
+      document.body.classList.remove('reaction-dragging')
+    }
+  })
 
-  function update(fn) {
-    setGroups((prev) => fn(prev.map((g) => [...g])).filter((g) => g.length > 0))
+  function onMouseDown(e, key) {
+    if (e.button !== 0) return
+    e.preventDefault()
+    drag.current = { key, x: e.clientX, y: e.clientY, active: false, pointerType: 'mouse' }
+  }
+
+  function onTouchStart(e, key) {
+    const t = e.touches[0]
+    drag.current = { key, x: t.clientX, y: t.clientY, active: false, pointerType: 'touch' }
+    drag.current.timer = setTimeout(() => { if (drag.current?.key === key) startDrag() }, LONG_PRESS_MS)
+  }
+
+  function addGroup() {
+    setGroups((prev) => [...prev, []])
     setMessage(null)
   }
 
-  // 같은 그룹 안에서 앞/뒤로
-  function move(delta) {
-    if (!pos) return
-    update((gs) => {
-      const g = gs[pos.g]
-      const j = pos.i + delta
-      if (j < 0 || j >= g.length) return gs
-      ;[g[pos.i], g[j]] = [g[j], g[pos.i]]
-      return gs
-    })
-  }
-  // 위/아래 그룹으로 옮기기
-  function moveGroup(delta) {
-    if (!pos) return
-    update((gs) => {
-      const target = pos.g + delta
-      if (target < 0 || target >= gs.length) return gs
-      const [r] = gs[pos.g].splice(pos.i, 1)
-      if (delta < 0) gs[target].push(r)
-      else gs[target].unshift(r)
-      return gs
-    })
-  }
-  // 따로 빼서 바로 아래에 새 그룹 만들기
-  function splitOut() {
-    if (!pos) return
-    update((gs) => {
-      const [r] = gs[pos.g].splice(pos.i, 1)
-      gs.splice(pos.g + 1, 0, [r])
-      return gs
-    })
-  }
-  // 그룹 풀기: 위 그룹과 합쳐요 (첫 그룹이면 아래 그룹과)
-  function ungroup(g) {
-    update((gs) => {
-      if (gs.length < 2) return gs
-      if (g === 0) { gs[1] = [...gs[0], ...gs[1]]; gs.splice(0, 1) } else { gs[g - 1].push(...gs[g]); gs.splice(g, 1) }
-      return gs
-    })
+  async function removeReaction(key) {
+    const r = groupsRef.current.flat().find((x) => x.key === key)
+    if (!r || !key.startsWith('custom:')) {
+      setMessage('기본 반응은 삭제할 수 없어요. 직접 추가한 반응만 삭제돼요.')
+      return
+    }
+    if (!window.confirm(`"${r.label}" 반응을 삭제할까요? 이미 남긴 반응 기록에서는 표시가 깨질 수 있어요.`)) return
+    setSaving(true)
+    try {
+      const updated = await removeCustomReaction(auth.client, auth.config, auth.configSha, key.slice('custom:'.length))
+      auth.setConfig(updated)
+      await auth.refreshConfig()
+      setGroups((prev) => prev.map((g) => g.filter((x) => x.key !== key)))
+    } catch (e) {
+      setMessage(e.message || '삭제하지 못했어요.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function save() {
     setSaving(true)
     try {
-      const updated = await saveReactionLayout(auth.client, auth.config, auth.configSha, groups.map((g) => g.map((r) => r.key)))
+      const layout = keysOf(groups)
+      const updated = await saveReactionLayout(auth.client, auth.config, auth.configSha, layout)
       auth.setConfig(updated)
       await auth.refreshConfig()
+      setGroups((prev) => prev.filter((g) => g.length))
       setMessage('저장했어요.')
     } catch (e) {
       setMessage(e.message || '저장하지 못했어요.')
@@ -84,78 +165,48 @@ export default function ReactionLayoutEditor() {
     }
   }
 
-  async function removeSelected() {
-    const r = pos && groups[pos.g][pos.i]
-    if (!r || !r.key.startsWith('custom:')) return
-    if (!window.confirm(`"${r.label}" 반응을 삭제할까요? 이미 남긴 반응 기록에서는 사라지지 않고 표시가 깨질 수 있어요.`)) return
-    setSaving(true)
-    try {
-      const updated = await removeCustomReaction(auth.client, auth.config, auth.configSha, r.key.slice('custom:'.length))
-      auth.setConfig(updated)
-      await auth.refreshConfig()
-      update((gs) => gs.map((g) => g.filter((x) => x.key !== r.key)))
-      setSelected(null)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const sel = pos && groups[pos.g][pos.i]
-
   return (
     <div className="reaction-layout">
       <p className="settings-repo-info">
-        이모티콘을 눌러 고른 뒤 아래 버튼으로 순서를 바꾸거나 그룹을 옮겨요. 비슷한 것끼리 묶어두면 '반응 추가' 창에서 그 묶음대로 보여요.
+        반응을 꾹 눌러서 원하는 자리로 끌어다 놓으세요. 비슷한 것끼리 묶어두면 '반응 추가' 창에서 그 묶음대로 보여요.
       </p>
+
       <div className="reaction-layout-groups">
         {groups.map((g, gi) => (
-          <div key={gi} className="reaction-layout-group">
-            <div className="reaction-layout-items">
-              {g.map((r) => (
-                <button
-                  key={r.key} type="button" title={r.label}
-                  className={`reaction-layout-item ${selected === r.key ? 'selected' : ''}`}
-                  onClick={() => setSelected((cur) => (cur === r.key ? null : r.key))}
-                >
-                  {r.type === 'image' ? <img src={r.value} alt={r.label} /> : r.value}
-                </button>
-              ))}
-            </div>
-            {groups.length > 1 && (
-              <button type="button" className="reaction-layout-ungroup" onClick={() => ungroup(gi)}>
-                그룹 풀기
-              </button>
-            )}
+          <div key={gi} className={`reaction-layout-group ${g.length === 0 ? 'empty' : ''}`} data-reaction-group={gi}>
+            {g.length === 0 && <span className="reaction-layout-empty">여기로 끌어다 놓으세요</span>}
+            {g.map((r) => (
+              <div
+                key={r.key}
+                role="button"
+                tabIndex={-1}
+                title={r.label}
+                data-reaction-key={r.key}
+                className={`reaction-layout-item ${dragKey === r.key ? 'dragging' : ''}`}
+                onMouseDown={(e) => onMouseDown(e, r.key)}
+                onTouchStart={(e) => onTouchStart(e, r.key)}
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                {r.type === 'image' ? <img src={r.value} alt={r.label} draggable={false} /> : r.value}
+              </div>
+            ))}
           </div>
         ))}
       </div>
 
-      <div className={`reaction-layout-tools ${sel ? '' : 'disabled'}`}>
-        <span className="reaction-layout-picked">
-          {sel ? <>고른 반응: {sel.type === 'image' ? <img src={sel.value} alt={sel.label} /> : sel.value} {sel.label}</> : '이모티콘을 먼저 눌러 고르세요'}
-        </span>
-        <div className="reaction-layout-buttons">
-          <button type="button" className="btn btn-small" disabled={!sel || pos.i === 0} onClick={() => move(-1)}>◀ 앞으로</button>
-          <button type="button" className="btn btn-small" disabled={!sel || pos.i === groups[pos.g].length - 1} onClick={() => move(1)}>뒤로 ▶</button>
-          <button type="button" className="btn btn-small" disabled={!sel || pos.g === 0} onClick={() => moveGroup(-1)}>▲ 위 그룹으로</button>
-          <button type="button" className="btn btn-small" disabled={!sel || pos.g === groups.length - 1} onClick={() => moveGroup(1)}>▼ 아래 그룹으로</button>
-          <button type="button" className="btn btn-small" disabled={!sel || groups[pos.g].length < 2} onClick={splitOut}>따로 빼서 새 그룹</button>
-          {sel?.key.startsWith('custom:') && (
-            <button
-              type="button" className="btn btn-small btn-danger icon-btn" disabled={saving} onClick={removeSelected}
-              title="이 반응 삭제" aria-label="이 반응 삭제"
-            >
-              <Icon name="delete" />
-            </button>
-          )}
+      {/* 끄는 중에만 보이는 휴지통: 직접 추가한 반응을 여기 놓으면 삭제 */}
+      {dragItem && (
+        <div className={`reaction-layout-trash ${overTrash ? 'over' : ''}`} data-reaction-trash>
+          <Icon name="delete" inherit />
+          {dragItem.key.startsWith('custom:') ? '여기에 놓으면 삭제' : '기본 반응은 삭제할 수 없어요'}
         </div>
-      </div>
+      )}
 
-      <div className="entry-editor-actions">
+      <div className="entry-editor-actions reaction-layout-actions">
+        <button type="button" className="btn" onClick={addGroup} disabled={saving}>새 반응 그룹</button>
         {message && <span className="settings-repo-info">{message}</span>}
-        <button type="button" className="btn btn-ghost" disabled={!dirty || saving} onClick={() => { setGroups(initial); setSelected(null) }}>되돌리기</button>
         <button type="button" className="btn btn-primary" disabled={!dirty || saving} onClick={save}>
-          {saving ? '저장 중...' : '그룹·순서 저장'}
+          {saving ? '저장 중...' : '그룹 · 순서 저장'}
         </button>
       </div>
     </div>

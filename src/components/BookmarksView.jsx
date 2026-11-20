@@ -64,7 +64,7 @@ export default function BookmarksView() {
 
   return (
     <div className="feed-view bookmarks-view">
-      <h2 className="detail-heading">내 북마크</h2>
+      <h2 className="detail-heading">내 북마크 · {bookmarks.length}개</h2>
 
       <div className="search-input-row inline-search">
         <Icon name="search" />
@@ -76,11 +76,8 @@ export default function BookmarksView() {
         {query && <button className="btn btn-ghost btn-small" onClick={() => setQuery('')} aria-label="지우기">✕</button>}
       </div>
 
-      <p className="search-status">
-        {bookmarks.length === 0
-          ? ''
-          : terms.length ? `${filtered.length}개 찾음 · 전체 ${bookmarks.length}개` : `전체 ${bookmarks.length}개`}
-      </p>
+      {/* 검색 중일 때만 찾은 개수 */}
+      {terms.length > 0 && bookmarks.length > 0 && <p className="search-status">{filtered.length}개 찾음</p>}
 
       {bookmarks.length === 0 && (
         <p className="feed-empty">
